@@ -16,6 +16,7 @@ public class Role extends ModelSelect {
     private String role;
     private String gender;
     private String ageGroup;
+    private Integer roleCount = 0;
 
     public Role(String role) {
         this.role = role;

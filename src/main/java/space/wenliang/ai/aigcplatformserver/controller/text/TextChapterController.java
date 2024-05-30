@@ -3,11 +3,13 @@ package space.wenliang.ai.aigcplatformserver.controller.text;
 import com.alibaba.fastjson2.JSON;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
+import scala.annotation.meta.param;
 import space.wenliang.ai.aigcplatformserver.bean.ChapterParse;
 import space.wenliang.ai.aigcplatformserver.bean.text.*;
 import space.wenliang.ai.aigcplatformserver.common.Result;
@@ -130,6 +132,12 @@ public class TextChapterController {
                     }
                 }
             }
+        }
+
+        if (!CollectionUtils.isEmpty(vo.getIndexes())) {
+            chapterInfos = chapterInfos.stream()
+                    .filter(chapterInfo -> vo.getIndexes().contains(chapterInfo.getIndex()))
+                    .toList();
         }
 
         return Result.success(chapterInfos);

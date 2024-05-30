@@ -3,6 +3,7 @@ package space.wenliang.ai.aigcplatformserver.bean.text;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.apache.commons.lang3.StringUtils;
 import space.wenliang.ai.aigcplatformserver.bean.model.ModelSelect;
 
 import java.util.Objects;
@@ -16,11 +17,15 @@ public class ChapterInfo extends Role {
     public static final int created = 1;
     public static final int modified = 2;
 
+    private String index;
     private Integer p;
     private Integer s;
     private String text;
     private Boolean linesFlag = false;
 
+    private Integer volume = 100;
+    private Integer speed = 1;
+    private Integer interval = 0;
     private String textLang;
     private Boolean audioModifiedFlag = false;
 
@@ -45,9 +50,15 @@ public class ChapterInfo extends Role {
         if (Objects.isNull(role)) {
             return;
         }
-        this.setRole(role.getRole());
-        this.setGender(role.getGender());
-        this.setAgeGroup(role.getAgeGroup());
+        if (StringUtils.isNotBlank(role.getRole())) {
+            this.setRole(role.getRole());
+        }
+        if (StringUtils.isNotBlank(role.getGender())) {
+            this.setGender(role.getGender());
+        }
+        if (StringUtils.isNotBlank(role.getAgeGroup())) {
+            this.setAgeGroup(role.getAgeGroup());
+        }
     }
 
     public void setModelSelect(ModelSelect modelSelect) {
@@ -59,5 +70,12 @@ public class ChapterInfo extends Role {
         this.setAudio(modelSelect.getAudio());
 
         this.setAudioStage(modified);
+    }
+
+    public String getIndex() {
+        if (Objects.nonNull(this.p) && Objects.nonNull(this.s)) {
+            return this.p + "-" + this.s;
+        }
+        return index;
     }
 }

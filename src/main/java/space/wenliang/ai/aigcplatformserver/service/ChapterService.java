@@ -274,10 +274,16 @@ public class ChapterService {
             List<Role> roles = JSON.parseArray(Files.readString(rolesPath), Role.class);
 
             List<Role> commonRoles = projectService.getCommonRoles(project);
+            List<ChapterInfo> chapterInfos = this.getChapterInfos(project, chapter);
+            Map<String, Long> roleCountMap = chapterInfos.stream()
+                    .collect(Collectors.groupingBy(ChapterInfo::getRole, Collectors.counting()));
 
             List<Role> result = new ArrayList<>(roles);
 
             result = result.stream()
+                    .peek(role -> {
+                        role.setRoleCount(roleCountMap.getOrDefault(role.getRole(), 0L).intValue());
+                    })
                     .sorted(Comparator.comparingInt((Role role) -> {
                         List<String> roleNames = commonRoles.stream().map(Role::getRole).toList();
                         int index = roleNames.indexOf(role.getRole());
