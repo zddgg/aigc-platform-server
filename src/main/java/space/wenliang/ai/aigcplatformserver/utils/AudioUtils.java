@@ -5,7 +5,7 @@ import java.nio.file.Path;
 
 public class AudioUtils {
 
-    public static void mp3toWav(String input, String output) throws Exception {
+    public static void mp3ToWav(String input, String output) throws Exception {
         Path outputPath = Path.of(output);
 
         Files.createDirectories(outputPath.getParent());

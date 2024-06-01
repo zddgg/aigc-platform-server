@@ -9,13 +9,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
-import scala.annotation.meta.param;
 import space.wenliang.ai.aigcplatformserver.bean.ChapterParse;
 import space.wenliang.ai.aigcplatformserver.bean.text.*;
 import space.wenliang.ai.aigcplatformserver.common.Result;
 import space.wenliang.ai.aigcplatformserver.config.PathConfig;
 import space.wenliang.ai.aigcplatformserver.exception.BizException;
 import space.wenliang.ai.aigcplatformserver.service.ChapterService;
+import space.wenliang.ai.aigcplatformserver.service.PathService;
 import space.wenliang.ai.aigcplatformserver.service.ProjectService;
 import space.wenliang.ai.aigcplatformserver.utils.ChapterUtil;
 import space.wenliang.ai.aigcplatformserver.utils.ForEach;
@@ -42,17 +42,19 @@ public class TextChapterController {
     private final ProjectService projectService;
 
     private final ChapterService chapterService;
+    private final PathService pathService;
 
-    public TextChapterController(PathConfig pathConfig, ProjectService projectService, ChapterService chapterService) {
+    public TextChapterController(PathConfig pathConfig, ProjectService projectService, ChapterService chapterService, PathService pathService) {
         this.pathConfig = pathConfig;
         this.projectService = projectService;
         this.chapterService = chapterService;
+        this.pathService = pathService;
     }
 
     @PostMapping("queryChapters")
     public Result<Object> queryChapters(@RequestBody Chapter vo) throws IOException {
         List<String> chapters = new ArrayList<>();
-        Path projectPath = Path.of(pathConfig.getFsDir(), "text", vo.getProject(), "章节");
+        Path projectPath = pathService.buildProjectPath("text", vo.getProject(), "章节");
         if (Files.exists(projectPath)) {
             chapters = Files.list(projectPath).map(path -> path.getFileName().toString()).toList();
         }
@@ -64,7 +66,7 @@ public class TextChapterController {
 
     @PostMapping("tmpChapterSplit")
     public Result<Object> tmpChapterSplit(@RequestBody ChapterSplitVO vo) throws IOException {
-        Path originFilePath = Path.of(pathConfig.getFsDir(), "text", vo.getProject(), "config", "原文.txt");
+        Path originFilePath = pathService.buildProjectPath("text", vo.getProject(), "config", "原文.txt");
         List<ChapterParse> chapterParses = ChapterUtil.chapterSplit(originFilePath.toAbsolutePath().toString(), vo.getChapterPattern());
         List<String> titleList = chapterParses.stream().map(ChapterParse::getTitle).toList();
         return Result.success(titleList);
@@ -72,7 +74,7 @@ public class TextChapterController {
 
     @PostMapping("chapterSplit")
     public Result<Object> chapterSplit(@RequestBody ChapterSplitVO vo) throws IOException {
-        Path originFilePath = Path.of(pathConfig.getFsDir(), "text", vo.getProject(), "config", "原文.txt");
+        Path originFilePath = pathService.buildProjectPath("text", vo.getProject(), "config", "原文.txt");
         List<ChapterParse> chapterParses = ChapterUtil.chapterSplit(
                 originFilePath.toAbsolutePath().toString(), vo.getChapterPattern());
 
@@ -88,7 +90,7 @@ public class TextChapterController {
                 chapterInfos = chapterInfos.stream().peek(chapterInfo -> chapterInfo.setRoleInfo(new Role("旁白"))).toList();
 
                 String chapterDirName = index + "--" + chapterParse.getTitle();
-                Path chapterDir = Path.of(pathConfig.getFsDir(), "text", vo.getProject(), "章节", chapterDirName);
+                Path chapterDir = pathService.buildProjectPath("text", vo.getProject(), "章节", chapterDirName);
 
                 Files.createDirectories(chapterDir);
 
@@ -109,12 +111,12 @@ public class TextChapterController {
     public Result<Object> queryChapterInfo(@RequestBody Chapter vo) throws IOException {
         List<ChapterInfo> chapterInfos = new ArrayList<>();
         if (StringUtils.isNotBlank(vo.getProject()) && StringUtils.isNotBlank(vo.getChapter())) {
-            Path chapterInfoPath = Path.of(pathConfig.getFsDir(), "text", vo.getProject(), "章节", vo.getChapter(), "chapterInfo.json");
+            Path chapterInfoPath = pathService.buildProjectPath("text", vo.getProject(), "章节", vo.getChapter(), "chapterInfo.json");
             if (Files.exists(chapterInfoPath)) {
                 chapterInfos = JSON.parseArray(Files.readString(chapterInfoPath), ChapterInfo.class);
             }
 
-            Path audioDirPath = Path.of(pathConfig.getFsDir(), "text", vo.getProject(), "章节", vo.getChapter(), "audio");
+            Path audioDirPath = pathService.buildProjectPath("text", vo.getProject(), "章节", vo.getChapter(), "audio");
             if (Files.exists(audioDirPath)) {
                 Map<String, String> audioNameMap = Files.list(audioDirPath)
                         .map(path -> path.getFileName().toString()).collect(Collectors.toMap(
@@ -128,7 +130,7 @@ public class TextChapterController {
                 for (ChapterInfo chapterInfo : chapterInfos) {
                     String key = chapterInfo.getP() + "-" + chapterInfo.getS();
                     if (audioNameMap.containsKey(key)) {
-                        chapterInfo.setAudioUrl(pathConfig.buildFsUrl("text", vo.getProject(), "章节", vo.getChapter(), "audio", audioNameMap.get(key)));
+                        chapterInfo.setAudioUrl(pathConfig.buildProjectUrl("text", vo.getProject(), "章节", vo.getChapter(), "audio", audioNameMap.get(key)));
                     }
                 }
             }
@@ -146,7 +148,7 @@ public class TextChapterController {
     @PostMapping("linesParse")
     public Result<Object> linesParse(@RequestBody Chapter vo) throws IOException {
         if (StringUtils.isNotBlank(vo.getProject()) && StringUtils.isNotBlank(vo.getChapter())) {
-            Path chapterInfoPath = Path.of(pathConfig.getFsDir(), "text", vo.getProject(), "章节", vo.getChapter(), "chapterInfo.json");
+            Path chapterInfoPath = pathService.buildProjectPath("text", vo.getProject(), "章节", vo.getChapter(), "chapterInfo.json");
             if (Files.exists(chapterInfoPath)) {
                 List<ChapterInfo> chapterInfos = JSON.parseArray(Files.readString(chapterInfoPath), ChapterInfo.class);
                 Map<Integer, List<ChapterInfo>> chapterInfoMap = chapterInfos.stream().collect(Collectors.groupingBy(ChapterInfo::getP));

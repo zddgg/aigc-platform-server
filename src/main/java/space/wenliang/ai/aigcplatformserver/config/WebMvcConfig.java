@@ -1,10 +1,5 @@
 package space.wenliang.ai.aigcplatformserver.config;
 
-import org.apache.http.client.config.RequestConfig;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
@@ -19,20 +14,23 @@ import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import space.wenliang.ai.aigcplatformserver.spring.resolver.SingleValueParamHandlerMethodArgumentResolver;
 
-import java.io.File;
 import java.util.List;
 
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
 
-    @Value("${user.dir}")
-    private String userDir;
+    private final PathConfig pathConfig;
+
+    public WebMvcConfig(PathConfig pathConfig) {
+        this.pathConfig = pathConfig;
+    }
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        String novelCastPath = new File(userDir, "story-caster").getAbsolutePath();
-        registry.addResourceHandler("/files/**")
-                .addResourceLocations("file:" + novelCastPath + "/");
+        registry.addResourceHandler("/model/**")
+                .addResourceLocations("file:" + pathConfig.getScModelDir() + "/");
+        registry.addResourceHandler("/project/**")
+                .addResourceLocations("file:" + pathConfig.getScProjectDir() + "/");
     }
 
     @Override
@@ -66,27 +64,6 @@ public class WebMvcConfig implements WebMvcConfigurer {
     public WebClient webClient() {
         return WebClient.builder()
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .build();
-    }
-
-    @Bean
-    public CloseableHttpClient httpClient() {
-        // 设置连接池管理器
-        PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
-        connectionManager.setMaxTotal(50);
-        connectionManager.setDefaultMaxPerRoute(20);
-
-        // 设置请求配置
-        RequestConfig requestConfig = RequestConfig.custom()
-                .setConnectTimeout(600000) // 连接超时时间（毫秒）
-                .setSocketTimeout(30000)  // 读取超时时间（毫秒）
-                .setConnectionRequestTimeout(30000) // 从连接池获取连接的超时时间（毫秒）
-                .build();
-
-        // 创建HttpClient
-        return HttpClients.custom()
-                .setConnectionManager(connectionManager)
-                .setDefaultRequestConfig(requestConfig)
                 .build();
     }
 }

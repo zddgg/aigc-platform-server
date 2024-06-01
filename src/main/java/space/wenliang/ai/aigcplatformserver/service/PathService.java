@@ -14,35 +14,43 @@ public class PathService {
         this.pathConfig = pathConfig;
     }
 
+    public Path buildModelPath(String... names) {
+        return Path.of(pathConfig.getScModelDir(), names);
+    }
+
+    public Path buildProjectPath(String... names) {
+        return Path.of(pathConfig.getScProjectDir(), names);
+    }
+
     public Path getCommonRolesPath(String project) {
-        return Path.of(pathConfig.getFsDir(), "text", project, "config", "common-roles.json");
+        return buildProjectPath("text", project, "config", "common-roles.json");
     }
 
     public Path getRolesPath(String project, String chapter) {
-        return Path.of(pathConfig.getFsDir(), "text", project, "章节", chapter, "roles.json");
+        return buildProjectPath("text", project, "章节", chapter, "roles.json");
     }
 
     public Path getChapterInfoPath(String project, String chapter) {
-        return Path.of(pathConfig.getFsDir(), "text", project, "章节", chapter, "chapterInfo.json");
+        return buildProjectPath("text", project, "章节", chapter, "chapterInfo.json");
     }
 
     public Path getAiResultPath(String project, String chapter) {
-        return Path.of(pathConfig.getFsDir(), "text", project, "章节", chapter, "aiResult.json");
+        return buildProjectPath("text", project, "章节", chapter, "aiResult.json");
     }
 
     public Path getEdgeTtsConfigPath() {
-        return Path.of(pathConfig.getFsDir(), "config", "edge-tts-config.json");
+        return buildProjectPath("config", "edge-tts-config.json");
     }
 
     public Path getAudioServerConfigPath() {
-        return Path.of(pathConfig.getFsDir(), "config", "audio-server-config.json");
+        return buildProjectPath("config", "audio-server-config.json");
     }
 
     public Path getChatConfigPath() {
-        return Path.of(pathConfig.getFsDir(), "config", "chat-config.json");
+        return buildProjectPath("config", "chat-config.json");
     }
 
     public Path getRefAudioConfigPath() {
-        return Path.of(pathConfig.getFsDir(), "config", "ref-audio-config.json");
+        return buildProjectPath("config", "ref-audio-config.json");
     }
 }

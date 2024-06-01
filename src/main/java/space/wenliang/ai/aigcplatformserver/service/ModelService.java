@@ -20,9 +20,11 @@ import java.util.stream.Collectors;
 public class ModelService {
 
     private final PathConfig pathConfig;
+    private final PathService pathService;
 
-    public ModelService(PathConfig pathConfig) {
+    public ModelService(PathConfig pathConfig, PathService pathService) {
         this.pathConfig = pathConfig;
+        this.pathService = pathService;
     }
 
     public List<GsvModel> getModels(String type) throws IOException {
@@ -34,7 +36,7 @@ public class ModelService {
     public List<RefAudio> getAudios() throws IOException {
         List<RefAudio> refAudios = buildAudios();
 
-        Path audioConfigPath = Path.of(pathConfig.getFsDir(), "config", "ref-audio-config.json");
+        Path audioConfigPath = pathService.getRefAudioConfigPath();
         if (Files.exists(audioConfigPath)) {
             List<RefAudio> refAudioConfigs = JSON.parseArray(Files.readString(audioConfigPath), RefAudio.class);
             if (!CollectionUtils.isEmpty(refAudioConfigs)) {
@@ -48,12 +50,10 @@ public class ModelService {
     }
 
     public List<GsvModel> buildModels(String type) throws IOException {
-        Path gsvModelPath = Path.of(pathConfig.getFsDir(), "model", type);
-        List<Group> gsvModelGroups = new ArrayList<>();
+        Path gsvModelPath = pathService.buildModelPath("model", type);
         List<GsvModel> gsvModels = new ArrayList<>();
         if (Files.exists(gsvModelPath)) {
             ForEach.forEach(Files.list(gsvModelPath), (groupIndex, group) -> {
-                gsvModelGroups.add(new Group(groupIndex, group.getFileName().toString()));
                 if (Files.isDirectory(group)) {
                     try {
                         ForEach.forEach(Files.list(group), (modelIndex, model) -> {
@@ -89,8 +89,8 @@ public class ModelService {
     }
 
     public List<RefAudio> buildAudios() throws IOException {
-        String[] dirs = {"model", "ref-audio"};
-        Path audioPath = Path.of(pathConfig.getFsDir(), dirs);
+        String[] dirs = {"ref-audio"};
+        Path audioPath = pathService.buildModelPath(dirs);
         List<RefAudio> refAudios = new ArrayList<>();
         if (Files.exists(audioPath)) {
             ForEach.forEach(Files.list(audioPath), (groupIndex, group) -> {
@@ -118,13 +118,13 @@ public class ModelService {
                                                         avatarDir.add(timbre.getFileName().toString());
                                                         avatarDir.add(timbreMood.getFileName().toString());
                                                         avatarDir.add(moodAudio.getFileName().toString());
-                                                        mood.setAvatar(pathConfig.buildFsUrl(avatarDir.toArray(new String[0])));
+                                                        mood.setAvatar(pathConfig.buildModelUrl(avatarDir.toArray(new String[0])));
                                                     } else {
                                                         RefAudio.MoodAudio newMoodAudio = new RefAudio.MoodAudio();
                                                         newMoodAudio.setId(audioIndex);
                                                         newMoodAudio.setName(moodAudio.getFileName().toString());
                                                         newMoodAudio.setText(FileNameUtil.getPrefix(moodAudio.getFileName().toString()));
-                                                        newMoodAudio.setUrl(pathConfig.buildFsUrl(
+                                                        newMoodAudio.setUrl(pathConfig.buildModelUrl(
                                                                 dirs,
                                                                 group.getFileName().toString(),
                                                                 timbre.getFileName().toString(),
@@ -148,7 +148,7 @@ public class ModelService {
                                                 avatarDir.add(group.getFileName().toString());
                                                 avatarDir.add(timbre.getFileName().toString());
                                                 avatarDir.add(timbreMood.getFileName().toString());
-                                                refAudio.setAvatar(pathConfig.buildFsUrl(avatarDir.toArray(new String[0])));
+                                                refAudio.setAvatar(pathConfig.buildModelUrl(avatarDir.toArray(new String[0])));
                                             }
                                         }
                                     });
@@ -185,7 +185,7 @@ public class ModelService {
         }
 
         Map<String, EdgeTtsVoice> edgeTtsVoiceMap = new HashMap<>();
-        Path etConfigPath = Path.of(pathConfig.getFsDir(), "model", "edge-tts", "config.json");
+        Path etConfigPath = pathService.getEdgeTtsConfigPath();
         if (Files.exists(etConfigPath)) {
             EdgeTtsModelConfig edgeTtsModelConfig = JSON.parseObject(Files.readString(etConfigPath), EdgeTtsModelConfig.class);
             if (edgeTtsModelConfig != null && !CollectionUtils.isEmpty(edgeTtsModelConfig.getVoices())) {

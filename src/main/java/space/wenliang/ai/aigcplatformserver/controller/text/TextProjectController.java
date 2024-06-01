@@ -9,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 import space.wenliang.ai.aigcplatformserver.common.Result;
 import space.wenliang.ai.aigcplatformserver.config.PathConfig;
 import space.wenliang.ai.aigcplatformserver.exception.BizException;
+import space.wenliang.ai.aigcplatformserver.service.PathService;
 import space.wenliang.ai.aigcplatformserver.spring.annotation.SingleValueParam;
 import space.wenliang.ai.aigcplatformserver.utils.FileUtils;
 
@@ -24,15 +25,17 @@ import java.util.List;
 public class TextProjectController {
 
     private final PathConfig pathConfig;
+    private final PathService pathService;
 
-    public TextProjectController(PathConfig pathConfig) {
+    public TextProjectController(PathConfig pathConfig, PathService pathService) {
         this.pathConfig = pathConfig;
+        this.pathService = pathService;
     }
 
     @PostMapping("create")
     public Result<Object> create(@RequestParam("project") String project,
                                  @RequestParam("file") MultipartFile file) throws IOException {
-        Path projectPath = Path.of(pathConfig.getFsDir(), "text", project);
+        Path projectPath = pathService.buildProjectPath("text", project);
         if (Files.exists(projectPath)) {
             throw new BizException("项目已存在");
         }
@@ -47,8 +50,9 @@ public class TextProjectController {
     @SneakyThrows
     @PostMapping("list")
     public Result<Object> list() {
-        Path textProjectPath = Path.of(pathConfig.getFsDir(), "text");
+        Path textProjectPath = pathService.buildProjectPath("text");
         List<String> projects = Files.list(textProjectPath)
+                .filter(Files::isDirectory)
                 .sorted(Comparator.comparing(path -> {
                     try {
                         return Files.readAttributes(path, BasicFileAttributes.class).lastAccessTime();
@@ -63,7 +67,7 @@ public class TextProjectController {
 
     @PostMapping("delete")
     public Result<Object> delete(@SingleValueParam("project") String project) throws IOException {
-        Path projectPath = Path.of(pathConfig.getFsDir(), "text", project);
+        Path projectPath = pathService.buildProjectPath("text", project);
         if (Files.exists(projectPath) && Files.isDirectory(projectPath)) {
             FileUtils.deleteDirectoryAll(projectPath);
         }

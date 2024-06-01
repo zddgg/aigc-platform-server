@@ -9,6 +9,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
+import space.wenliang.ai.aigcplatformserver.bean.model.AudioServerConfig;
 import space.wenliang.ai.aigcplatformserver.bean.text.*;
 import space.wenliang.ai.aigcplatformserver.config.PathConfig;
 import space.wenliang.ai.aigcplatformserver.exception.BizException;
@@ -35,19 +36,21 @@ public class ChapterService {
     private final ProjectService projectService;
     private final AudioCreater audioCreater;
     private final AudioProcessWebSocketHandler audioProcessWebSocketHandler;
+    private final ConfigService configService;
 
     public ChapterService(AiService aiService,
                           PathConfig pathConfig,
                           PathService pathService,
                           ProjectService projectService,
                           AudioCreater audioCreater,
-                          AudioProcessWebSocketHandler audioProcessWebSocketHandler) {
+                          AudioProcessWebSocketHandler audioProcessWebSocketHandler, ConfigService configService) {
         this.aiService = aiService;
         this.pathConfig = pathConfig;
         this.pathService = pathService;
         this.projectService = projectService;
         this.audioCreater = audioCreater;
         this.audioProcessWebSocketHandler = audioProcessWebSocketHandler;
+        this.configService = configService;
     }
 
     public List<ChapterInfo> getChapterInfos(String project, String chapter) throws IOException {
@@ -85,9 +88,7 @@ public class ChapterService {
         }
 
         if (!hasLines) {
-            if (Files.notExists(aiResultJsonPath)) {
-                Files.write(aiResultJsonPath, "{}".getBytes());
-            }
+            mergeAiResultInfo(project, chapter, "{}");
             return Flux.empty();
         }
 
@@ -173,51 +174,50 @@ public class ChapterService {
         try {
             List<ChapterInfo> chapterInfos = JSON.parseArray(Files.readString(chapterInfoPath), ChapterInfo.class);
             AiResult aiResult = parseAiResult(aiResultStr);
-            if (Objects.nonNull(aiResult) && !CollectionUtils.isEmpty(aiResult.getLinesMappings())) {
 
-                aiResult = reCombineAiResult(aiResult);
+            aiResult = reCombineAiResult(aiResult);
 
-                Path aiResultPath = pathService.getAiResultPath(project, chapter);
-                Files.write(aiResultPath, JSON.toJSONBytes(aiResult));
+            Path aiResultPath = pathService.getAiResultPath(project, chapter);
+            Files.write(aiResultPath, JSON.toJSONBytes(aiResult));
 
-                List<Role> roles = aiResult.getRoles();
-                Map<String, Role> roleMap = roles.stream()
-                        .collect(Collectors.toMap(Role::getRole, Function.identity(), (a, b) -> a));
+            List<Role> roles = aiResult.getRoles();
+            Map<String, Role> roleMap = roles.stream()
+                    .collect(Collectors.toMap(Role::getRole, Function.identity(), (a, b) -> a));
 
-                Map<String, LinesMapping> linesMappingMap = aiResult.getLinesMappings().stream()
-                        .collect(Collectors.toMap(LinesMapping::getLinesIndex, Function.identity(), (a, b) -> a));
-                boolean hasAside = false;
-                for (ChapterInfo chapterInfo : chapterInfos) {
-                    String key = chapterInfo.getP() + "-" + chapterInfo.getS();
-                    String role = "旁白";
-                    if (linesMappingMap.containsKey(key)) {
-                        LinesMapping linesMapping = linesMappingMap.get(key);
-                        role = linesMapping.getRole();
-                    } else {
-                        hasAside = true;
-                    }
-                    if (commonRoleMap.containsKey(role)) {
-                        chapterInfo.setModelSelect(commonRoleMap.get(role));
-                    }
-                    chapterInfo.setRoleInfo(roleMap.get(role));
+            Map<String, LinesMapping> linesMappingMap = aiResult.getLinesMappings().stream()
+                    .collect(Collectors.toMap(LinesMapping::getLinesIndex, Function.identity(), (a, b) -> a));
+            boolean hasAside = false;
+            for (ChapterInfo chapterInfo : chapterInfos) {
+                String key = chapterInfo.getP() + "-" + chapterInfo.getS();
+                String role = "旁白";
+                if (linesMappingMap.containsKey(key)) {
+                    LinesMapping linesMapping = linesMappingMap.get(key);
+                    role = linesMapping.getRole();
+                } else {
+                    hasAside = true;
                 }
-
-                Path rolesPath = pathService.getRolesPath(project, chapter);
-                if (hasAside) {
-                    String role = "旁白";
-                    roles.add(new Role(role));
+                if (commonRoleMap.containsKey(role)) {
+                    chapterInfo.setModelSelect(commonRoleMap.get(role));
                 }
-
-                for (Role role : roles) {
-                    if (commonRoleMap.containsKey(role.getRole())) {
-                        role.setModelSelect(commonRoleMap.get(role.getRole()));
-                    }
-                }
-
-                Files.write(rolesPath, JSON.toJSONBytes(roles));
-
-                Files.write(chapterInfoPath, JSON.toJSONBytes(chapterInfos));
+                chapterInfo.setRoleInfo(roleMap.get(role));
             }
+
+            Path rolesPath = pathService.getRolesPath(project, chapter);
+            if (hasAside) {
+                String role = "旁白";
+                roles.add(new Role(role));
+            }
+
+            for (Role role : roles) {
+                if (commonRoleMap.containsKey(role.getRole())) {
+                    role.setModelSelect(commonRoleMap.get(role.getRole()));
+                }
+            }
+
+            Files.write(rolesPath, JSON.toJSONBytes(roles));
+
+            Files.write(chapterInfoPath, JSON.toJSONBytes(chapterInfos));
+
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -534,7 +534,7 @@ public class ChapterService {
         audioContext.setTextLanguage("zh");
         audioContext.setType(chapterInfo.getModelType());
 
-        Path outputDir = Path.of(pathConfig.getFsDir(), "text", project, "章节", chapter, "audio");
+        Path outputDir = pathService.buildProjectPath("text", project, "章节", chapter, "audio");
         if (Files.notExists(outputDir)) {
             Files.createDirectories(outputDir);
         }
@@ -545,34 +545,30 @@ public class ChapterService {
 
         List<String> model = chapterInfo.getModel();
 
+        List<AudioServerConfig> audioServerConfigs = configService.getAudioServerConfigs();
+        Map<String, String> audioServerMap = audioServerConfigs.stream()
+                .collect(Collectors.toMap(AudioServerConfig::getName, AudioServerConfig::getServerUrl));
+
+        audioContext.setType(chapterInfo.getModelType());
+        audioContext.setUrl(audioServerMap.get(chapterInfo.getModelType()));
+
         if (StringUtils.equals(chapterInfo.getModelType(), "edge-tts")) {
-            audioContext.setType("edge-tts");
-            audioContext.setUrl("http://127.0.0.1:8081/tts");
             audioContext.setSpeaker(model.getFirst());
 
         } else {
             String[] array = chapterInfo.getAudio().toArray(new String[0]);
 
-            Path refAudioPath = Path.of(pathConfig.getFsDir(), "model", "ref-audio", array[0], array[1], array[2], array[3]);
+            Path refAudioPath = pathService.buildModelPath("ref-audio", array[0], array[1], array[2], array[3]);
 
             audioContext.setRefAudioPath(refAudioPath.toAbsolutePath().toString());
             audioContext.setRefText(array[3].replace(".wav", ""));
             audioContext.setRefTextLanguage("zh");
-
-
-            if (StringUtils.equals(chapterInfo.getModelType(), "gpt-sovits")) {
-                audioContext.setUrl("http://127.0.0.1:9880/tts");
-            }
-            if (StringUtils.equals(chapterInfo.getModelType(), "fish-speech")) {
-                audioContext.setType("fish-speech");
-                audioContext.setUrl("http://127.0.0.1:8000/v1/invoke");
-            }
         }
 
         log.info(JSON.toJSONString(audioContext));
         audioCreater.createFile(audioContext);
 
-        chapterInfo.setAudioUrl(pathConfig.buildFsUrl("text", project, "章节", chapter, "audio", fileName + ".wav"));
+        chapterInfo.setAudioUrl(pathConfig.buildProjectUrl("text", project, "章节", chapter, "audio", fileName + ".wav"));
 
         List<String> list = new ArrayList<>();
         // 删除之前的音频
