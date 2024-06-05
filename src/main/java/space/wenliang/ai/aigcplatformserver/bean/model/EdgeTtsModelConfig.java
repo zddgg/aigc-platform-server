@@ -7,7 +7,7 @@ import java.util.List;
 
 @Getter
 @Setter
-public class EdgeTtsModelConfig extends ModelConfig{
+public class EdgeTtsModelConfig extends ModelConfig {
 
     private String createDate;
     private List<EdgeTtsVoice> voices;

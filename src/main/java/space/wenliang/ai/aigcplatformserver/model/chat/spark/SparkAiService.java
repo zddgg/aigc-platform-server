@@ -4,14 +4,16 @@ import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import okhttp3.HttpUrl;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.socket.client.WebSocketClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
 import reactor.core.publisher.Sinks;
-import space.wenliang.ai.aigcplatformserver.model.chat.AiService;
+import space.wenliang.ai.aigcplatformserver.bean.model.ChatModelParam;
+import space.wenliang.ai.aigcplatformserver.model.chat.IAiService;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -21,25 +23,9 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
-public class SparkAiService implements AiService {
-
-    @Value("${ai.spark.app-id:}")
-    private String appId;
-
-    @Value("${ai.spark.api-key:}")
-    private String apiKey;
-
-    @Value("${ai.spark.api-secret:}")
-    private String apiSecret;
-
-    @Value("${ai.spark.domain:}")
-    private String domain;
-
-    @Value("${spring.ai.openai.chat.options.temperature}")
-    private Float temperature;
-
-    @Value("${spring.ai.openai.chat.options.max-tokens}")
-    private Integer maxTokens;
+@Slf4j
+@Service("Spark")
+public class SparkAiService implements IAiService {
 
     private final WebSocketClient webSocketClient;
 
@@ -48,14 +34,14 @@ public class SparkAiService implements AiService {
     }
 
     @Override
-    public Flux<String> call(String systemMessage, String userMessage) {
-        String authUrl = getAuthUrl(apiKey, apiSecret);
+    public Flux<String> call(ChatModelParam param, String systemMessage, String userMessage) {
+        String authUrl = getAuthUrl(param);
 
         StringBuilder output = new StringBuilder();
 
         Sinks.Many<String> sink = Sinks.many().multicast().onBackpressureBuffer();
 
-        String request = buildRequest(systemMessage, userMessage);
+        String request = buildRequest(param, systemMessage, userMessage);
 
         webSocketClient.execute(URI.create(authUrl), session ->
                 session.send(Mono.just(session.textMessage(request)))
@@ -81,10 +67,10 @@ public class SparkAiService implements AiService {
     }
 
     @Override
-    public Flux<String> stream(String systemMessage, String userMessage) {
-        String authUrl = getAuthUrl(apiKey, apiSecret);
+    public Flux<String> stream(ChatModelParam param, String systemMessage, String userMessage) {
+        String authUrl = getAuthUrl(param);
 
-        String request = buildRequest(systemMessage, userMessage);
+        String request = buildRequest(param, systemMessage, userMessage);
         String url = authUrl.replace("http://", "ws://").replace("https://", "wss://");
 
         Sinks.Many<String> sink = Sinks.many().multicast().onBackpressureBuffer();
@@ -111,18 +97,18 @@ public class SparkAiService implements AiService {
         return sink.asFlux();
     }
 
-    private String buildRequest(String systemMessage, String userMessage) {
+    private String buildRequest(ChatModelParam param, String systemMessage, String userMessage) {
         JSONObject requestJson = new JSONObject();
 
         JSONObject header = new JSONObject();  // header参数
-        header.put("app_id", appId);
+        header.put("app_id", param.getAppId());
         header.put("uid", UUID.randomUUID().toString().substring(0, 10));
 
         JSONObject parameter = new JSONObject(); // parameter参数
         JSONObject chat = new JSONObject();
-        chat.put("domain", domain);
-        chat.put("temperature", temperature);
-        chat.put("max_tokens", maxTokens);
+        chat.put("domain", param.getModel());
+        chat.put("temperature", param.getTemperature());
+        chat.put("max_tokens", param.getMaxTokens());
         parameter.put("chat", chat);
 
         JSONObject payload = new JSONObject(); // payload参数
@@ -142,19 +128,11 @@ public class SparkAiService implements AiService {
     }
 
     @SneakyThrows
-    public String getAuthUrl(String apiKey, String apiSecret) {
+    public String getAuthUrl(ChatModelParam param) {
 
-        String hostUrl = "https://spark-api.xf-yun.com/v3.5/chat";
-        if ("generalv3".equals(domain)) {
-            hostUrl = "https://spark-api.xf-yun.com/v3.1/chat";
-        }
-        if ("generalv2".equals(domain)) {
-            hostUrl = "https://spark-api.xf-yun.com/v2.1/chat";
-        }
-        if ("general".equals(domain)) {
-            hostUrl = "https://spark-api.xf-yun.com/v1.1/chat";
-        }
-
+        String apiKey = param.getApiKey();
+        String apiSecret = param.getApiSecret();
+        String hostUrl = param.getHost() + param.getPath();
 
         URL url = new URL(hostUrl);
         // 时间

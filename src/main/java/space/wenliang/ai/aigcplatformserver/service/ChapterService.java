@@ -2,6 +2,10 @@ package space.wenliang.ai.aigcplatformserver.service;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
+import jakarta.annotation.PostConstruct;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -17,12 +21,16 @@ import space.wenliang.ai.aigcplatformserver.model.audio.AudioContext;
 import space.wenliang.ai.aigcplatformserver.model.audio.AudioCreater;
 import space.wenliang.ai.aigcplatformserver.model.chat.AiService;
 import space.wenliang.ai.aigcplatformserver.socket.AudioProcessWebSocketHandler;
+import space.wenliang.ai.aigcplatformserver.utils.PathWrapper;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -51,6 +59,11 @@ public class ChapterService {
         this.audioCreater = audioCreater;
         this.audioProcessWebSocketHandler = audioProcessWebSocketHandler;
         this.configService = configService;
+    }
+
+    @PostConstruct
+    public void init() {
+        audioCreateTask();
     }
 
     public List<ChapterInfo> getChapterInfos(String project, String chapter) throws IOException {
@@ -496,11 +509,27 @@ public class ChapterService {
             if (Objects.equals(chapterInfo.getP(), info.getP())
                     && Objects.equals(chapterInfo.getS(), info.getS())) {
                 info.setText(chapterInfo.getText());
+                info.setModified();
             }
         }
 
         this.saveChapterInfos(chapter.getProject(), chapter.getChapter(), chapterInfos);
     }
+
+    public void stopCreateAudio() {
+        audioCreateTaskQueue.clear();
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AudioCreateTask {
+        private String project;
+        private String chapter;
+        private ChapterInfo chapterInfo;
+    }
+
+    public static final LinkedBlockingDeque<AudioCreateTask> audioCreateTaskQueue = new LinkedBlockingDeque<>();
 
     public void startCreateAudio(AudioCreateParam param) {
         try {
@@ -517,10 +546,10 @@ public class ChapterService {
             log.info("批量生成数量，{}", chapterInfos.size());
 
             for (ChapterInfo chapterInfo : chapterInfos) {
-                createAudio(param.getProject(), param.getChapter(), chapterInfo);
+                audioCreateTaskQueue.add(new AudioCreateTask(param.getProject(), param.getChapter(), chapterInfo));
             }
 
-            log.info("批量生成结束，生成数量，{}", chapterInfos.size());
+            log.info("批量生成任务提交成功");
 
         } catch (Exception e) {
             log.error(e.getMessage());
@@ -529,9 +558,34 @@ public class ChapterService {
     }
 
     public void createAudio(String project, String chapter, ChapterInfo chapterInfo) throws Exception {
+        audioCreateTaskQueue.add(new AudioCreateTask(project, chapter, chapterInfo));
+    }
+
+    public void audioCreateTask() {
+        CompletableFuture.runAsync(() -> {
+                    while (true) {
+                        try {
+                            AudioCreateTask audioCreateTask = audioCreateTaskQueue.takeFirst();
+                            createAudio(audioCreateTask);
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                }, Executors.newFixedThreadPool(1))
+                .exceptionally(e -> {
+                    log.error(e.getMessage(), e);
+                    return null;
+                });
+    }
+
+    public void createAudio(AudioCreateTask audioCreateTask) throws Exception {
+        String project = audioCreateTask.getProject();
+        String chapter = audioCreateTask.getChapter();
+        ChapterInfo chapterInfo = audioCreateTask.getChapterInfo();
+
         AudioContext audioContext = new AudioContext();
         audioContext.setText(chapterInfo.getText());
-        audioContext.setTextLanguage("zh");
+        audioContext.setTextLang("zh");
         audioContext.setType(chapterInfo.getModelType());
 
         Path outputDir = pathService.buildProjectPath("text", project, "章节", chapter, "audio");
@@ -543,26 +597,29 @@ public class ChapterService {
         audioContext.setOutputDir(outputDir.toAbsolutePath().toString());
         audioContext.setOutputName(fileName);
 
-        List<String> model = chapterInfo.getModel();
+        String[] model = chapterInfo.getModel().toArray(new String[0]);
 
         List<AudioServerConfig> audioServerConfigs = configService.getAudioServerConfigs();
-        Map<String, String> audioServerMap = audioServerConfigs.stream()
-                .collect(Collectors.toMap(AudioServerConfig::getName, AudioServerConfig::getServerUrl));
+        Map<String, AudioServerConfig> audioServerMap = audioServerConfigs.stream()
+                .collect(Collectors.toMap(AudioServerConfig::getName, Function.identity()));
 
         audioContext.setType(chapterInfo.getModelType());
-        audioContext.setUrl(audioServerMap.get(chapterInfo.getModelType()));
+        audioContext.setAudioServerConfig(audioServerMap.get(chapterInfo.getModelType()));
 
         if (StringUtils.equals(chapterInfo.getModelType(), "edge-tts")) {
-            audioContext.setSpeaker(model.getFirst());
+            audioContext.setSpeaker(model[0]);
 
         } else {
             String[] array = chapterInfo.getAudio().toArray(new String[0]);
 
-            Path refAudioPath = pathService.buildModelPath("ref-audio", array[0], array[1], array[2], array[3]);
+            Path refAudioPath = pathService.buildRmModelPath("ref-audio", array[0], array[1], array[2], array[3]);
 
-            audioContext.setRefAudioPath(refAudioPath.toAbsolutePath().toString());
+            audioContext.setRefAudioPath(PathWrapper.getAbsolutePath(refAudioPath, pathConfig.hasRemotePlatForm()));
             audioContext.setRefText(array[3].replace(".wav", ""));
-            audioContext.setRefTextLanguage("zh");
+            audioContext.setRefTextLang("zh");
+
+            audioContext.setModelGroup(model[0]);
+            audioContext.setModel(model[1]);
         }
 
         log.info(JSON.toJSONString(audioContext));
@@ -595,10 +652,16 @@ public class ChapterService {
 
         this.saveChapterInfos(project, chapter, chapterInfos);
 
-        JSONObject jsonObject = new JSONObject();
-        jsonObject.put("project", project);
-        jsonObject.put("chapter", chapter);
-        jsonObject.put("chapterInfo", chapterInfo);
-        audioProcessWebSocketHandler.sendMessageToProject(project, JSON.toJSONString(jsonObject));
+        JSONObject j1 = new JSONObject();
+        j1.put("type", "result");
+        j1.put("project", project);
+        j1.put("chapter", chapter);
+        j1.put("chapterInfo", chapterInfo);
+        audioProcessWebSocketHandler.sendMessageToProject(project, JSON.toJSONString(j1));
+        JSONObject j2 = new JSONObject();
+        j2.put("type", "stage");
+        j2.put("project", project);
+        j2.put("taskNum", audioCreateTaskQueue.size());
+        audioProcessWebSocketHandler.sendMessageToProject(project, JSON.toJSONString(j2));
     }
 }

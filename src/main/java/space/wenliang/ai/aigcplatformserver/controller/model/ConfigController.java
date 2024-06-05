@@ -74,6 +74,22 @@ public class ConfigController {
         return Result.success();
     }
 
+    @PostMapping("chat/activeChatConfig")
+    public Result<Object> activeChatConfig(@RequestBody ChatModelParam chatModelParam) throws Exception {
+
+        ChatConfig chatConfig = configService.getChatConfig();
+        List<ChatModelParam> saveList = chatConfig.getServices().stream()
+                .peek(value -> {
+                    value.setActive(Objects.equals(value.getId(), chatModelParam.getId()));
+                })
+                .toList();
+
+        chatConfig.setServices(saveList);
+        configService.saveChatConfig(chatConfig);
+
+        return Result.success();
+    }
+
     @PostMapping("audioServer/queryAudioServerConfig")
     public Result<Object> queryAudioServerConfig() throws Exception {
         List<AudioServerConfig> configs = configService.getAudioServerConfigs();
@@ -86,6 +102,7 @@ public class ConfigController {
         for (AudioServerConfig audioServerConfig : configs) {
             if (StringUtils.equals(audioServerConfig.getName(), config.getName())) {
                 audioServerConfig.setServerUrl(config.getServerUrl());
+                audioServerConfig.setApiVersion(config.getApiVersion());
             }
         }
 

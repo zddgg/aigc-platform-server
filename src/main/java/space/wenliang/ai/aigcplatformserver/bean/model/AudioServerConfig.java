@@ -6,4 +6,5 @@ import lombok.Data;
 public class AudioServerConfig {
     private String name;
     private String serverUrl;
+    private String apiVersion;
 }

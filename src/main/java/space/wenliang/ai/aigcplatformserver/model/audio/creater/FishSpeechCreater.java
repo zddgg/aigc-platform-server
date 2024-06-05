@@ -29,9 +29,4 @@ public class FishSpeechCreater extends AbsAudioCreater {
 
         return params;
     }
-
-    @Override
-    public void format(AudioContext context) {
-
-    }
 }

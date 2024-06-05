@@ -41,7 +41,7 @@ public class ConfigService {
         Files.write(path, JSON.toJSONBytes(configs));
     }
 
-    public ChatConfig getChatConfig() throws Exception {
+    public ChatConfig getChatConfig() {
         Path path = pathService.getChatConfigPath();
         return FileUtils.getObjectFromFile(path, ChatConfig.class);
     }

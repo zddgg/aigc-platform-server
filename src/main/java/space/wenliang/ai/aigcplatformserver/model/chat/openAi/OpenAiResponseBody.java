@@ -1,11 +1,11 @@
-package space.wenliang.ai.aigcplatformserver.model.chat.glm;
+package space.wenliang.ai.aigcplatformserver.model.chat.openAi;
 
 import lombok.Data;
 
 import java.util.List;
 
 @Data
-public class GlmResponseBody {
+public class OpenAiResponseBody {
 
     private String id;
     private Long created;

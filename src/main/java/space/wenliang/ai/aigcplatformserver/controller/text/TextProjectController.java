@@ -60,7 +60,32 @@ public class TextProjectController {
                         throw new RuntimeException(e);
                     }
                 }))
-                .map(path -> path.getFileName().toString())
+                .map(path -> {
+//                    TextProject textProject = new TextProject();
+//                    textProject.setProject(path.getFileName().toString());
+//                    try {
+//                        Files.list(path).forEach(path1 -> {
+//                            try {
+//                                if (path1.getFileName().toString().equals("chapterInfo.json")) {
+//                                    List<ChapterInfo> chapterInfos = JSON.parseArray(Files.readString(path1), ChapterInfo.class);
+//                                    textProject.setTextNum(chapterInfos.size());
+//                                }
+//                                if (path1.getFileName().toString().equals("roles.json")) {
+//                                    List<Role> roles = JSON.parseArray(Files.readString(path1), Role.class);
+//                                    textProject.setRoleNum(roles.size());
+//                                }
+//                                if (path1.getFileName().toString().equals("output.wav")) {
+//                                    textProject.setStage("合并完成");
+//                                }
+//                            } catch (Exception e) {
+//                                throw new RuntimeException(e);
+//                            }
+//                        });
+//                    } catch (Exception e) {
+//                        throw new RuntimeException(e);
+//                    }
+                    return path.getFileName().toString();
+                })
                 .toList();
         return Result.success(projects);
     }

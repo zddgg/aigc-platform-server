@@ -7,38 +7,33 @@ import com.alibaba.dashscope.common.Message;
 import com.alibaba.dashscope.common.MessageManager;
 import com.alibaba.dashscope.common.Role;
 import io.reactivex.Flowable;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
-import space.wenliang.ai.aigcplatformserver.model.chat.AiService;
+import space.wenliang.ai.aigcplatformserver.bean.model.ChatModelParam;
+import space.wenliang.ai.aigcplatformserver.model.chat.IAiService;
 
-public class QwenAiService implements AiService {
-
-    @Value("${ai.qwen.api-key:}")
-    private String apiKey;
-
-    @Value("${ai.qwen.model:}")
-    private String model;
-
-    @Value("${spring.ai.openai.chat.options.temperature}")
-    private Float temperature;
+@Slf4j
+@Service("Qwen")
+public class QwenAiService implements IAiService {
 
     @Override
-    public Flux<String> call(String systemMessage, String userMessage) {
+    public Flux<String> call(ChatModelParam param, String systemMessage, String userMessage) {
         try {
             Generation gen = new Generation();
-            GenerationParam param = buildGenerationParam(systemMessage, userMessage, false);
-            return Flux.just(gen.call(param).getOutput().getChoices().getFirst().getMessage().getContent());
+            GenerationParam generationParam = buildGenerationParam(param, systemMessage, userMessage, false);
+            return Flux.just(gen.call(generationParam).getOutput().getChoices().getFirst().getMessage().getContent());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
     @Override
-    public Flux<String> stream(String systemMessage, String userMessage) {
+    public Flux<String> stream(ChatModelParam param, String systemMessage, String userMessage) {
         try {
             Generation gen = new Generation();
-            GenerationParam param = buildGenerationParam(systemMessage, userMessage, true);
-            Flowable<GenerationResult> result = gen.streamCall(param);
+            GenerationParam generationParam = buildGenerationParam(param, systemMessage, userMessage, true);
+            Flowable<GenerationResult> result = gen.streamCall(generationParam);
             return Flux.from(result).mapNotNull(generationResult -> generationResult.getOutput()
                     .getChoices().getFirst().getMessage().getContent());
         } catch (Exception e) {
@@ -46,7 +41,7 @@ public class QwenAiService implements AiService {
         }
     }
 
-    public GenerationParam buildGenerationParam(String systemMessage, String userMessage, boolean stream) {
+    public GenerationParam buildGenerationParam(ChatModelParam param, String systemMessage, String userMessage, boolean stream) {
         MessageManager msgManager = new MessageManager(10);
         Message systemMsg =
                 Message.builder().role(Role.SYSTEM.getValue()).content(systemMessage).build();
@@ -54,9 +49,9 @@ public class QwenAiService implements AiService {
         msgManager.add(systemMsg);
         msgManager.add(userMsg);
         return GenerationParam.builder()
-                .apiKey(apiKey)
-                .model(model)
-                .temperature(temperature)
+                .apiKey(param.getApiKey())
+                .model(param.getModel())
+                .temperature(param.getTemperature())
                 .messages(msgManager.get())
                 .resultFormat(GenerationParam.ResultFormat.MESSAGE)
                 .incrementalOutput(stream)

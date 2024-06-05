@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @RestController
@@ -93,13 +94,13 @@ public class EdgeTtsController {
         }
 
         List<AudioServerConfig> audioServerConfigs = configService.getAudioServerConfigs();
-        Map<String, String> audioServerMap = audioServerConfigs.stream()
-                .collect(Collectors.toMap(AudioServerConfig::getName, AudioServerConfig::getServerUrl));
+        Map<String, AudioServerConfig> audioServerMap = audioServerConfigs.stream()
+                .collect(Collectors.toMap(AudioServerConfig::getName, Function.identity()));
 
         AudioContext audioContext = new AudioContext();
 
         audioContext.setType("edge-tts");
-        audioContext.setUrl(audioServerMap.get("edge-tts"));
+        audioContext.setAudioServerConfig(audioServerMap.get("edge-tts"));
 
         String text = "你好呀。今天，也是充满希望的一天！";
         audioContext.setText(text);

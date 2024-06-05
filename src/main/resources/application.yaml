@@ -11,36 +11,8 @@ spring:
   mvc:
     async:
       request-timeout: 600000
-  ai:
-    retry:
-      max-attempts: 1
-    openai:
-      base-url: ${ai.openai.base-url}
-      api-key: ${ai.openai.api-key}
-      chat:
-        options:
-          model: ${ai.openai.model}
-          temperature: 0.3
-          max-tokens: 4096
 
-ai:
-  type: openai #这里只能配置 openai qwen spark glm  这几个
-
-  openai: # openai kimi ollama 使用这个配置
-    base-url: https://api.moonshot.cn
-    api-key: sk-3JFweWzYThTLKxzDscteffYanOoFm5rRUE1kcpdl3EKf4fT0
-    model: moonshot-v1-32k
-
-  qwen: # 千问通义
-    api-key: sk-8e0e9fc6a51b4472b8024c1030cfb964
-    model: qwen-turbo
-
-  spark: # 讯飞星火
-    app-id: f0b46057
-    api-key: 917f9aee175ee7486301918eb0e89fd4
-    api-secret: MWVkZWNmMGVlYTY1NWY1MDc0ZGIyOWFm
-    domain: generalv3.5
-
-  glm: # 智谱清言
-    api-key: 15e3a6f6ba770126ba28277b1962fb99.3nocinvpeD0x2yXw
-    model: glm-4
+remote:
+  enable: false
+  platform: unix
+  model-dir: /model

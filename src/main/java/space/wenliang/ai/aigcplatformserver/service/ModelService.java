@@ -5,7 +5,10 @@ import com.alibaba.fastjson2.JSON;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
-import space.wenliang.ai.aigcplatformserver.bean.model.*;
+import space.wenliang.ai.aigcplatformserver.bean.model.EdgeTtsModelConfig;
+import space.wenliang.ai.aigcplatformserver.bean.model.EdgeTtsVoice;
+import space.wenliang.ai.aigcplatformserver.bean.model.GsvModel;
+import space.wenliang.ai.aigcplatformserver.bean.model.RefAudio;
 import space.wenliang.ai.aigcplatformserver.config.PathConfig;
 import space.wenliang.ai.aigcplatformserver.utils.ForEach;
 
@@ -50,7 +53,7 @@ public class ModelService {
     }
 
     public List<GsvModel> buildModels(String type) throws IOException {
-        Path gsvModelPath = pathService.buildModelPath("model", type);
+        Path gsvModelPath = pathService.buildModelPath(type);
         List<GsvModel> gsvModels = new ArrayList<>();
         if (Files.exists(gsvModelPath)) {
             ForEach.forEach(Files.list(gsvModelPath), (groupIndex, group) -> {

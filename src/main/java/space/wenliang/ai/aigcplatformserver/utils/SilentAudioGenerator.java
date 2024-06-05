@@ -9,16 +9,6 @@ import java.nio.ShortBuffer;
 
 public class SilentAudioGenerator {
 
-    public static void main(String[] args) {
-        String outputFile = "tmp/silent.wav";
-        int sampleRate = 32000; // Sample rate in Hz
-        int audioChannels = 1; // Number of audio channels (mono)
-        int bitRate = 512000; // Bit rate in bits per second (bps)
-        int durationMs = 5000; // Duration in milliseconds
-
-        generateSilentAudio(outputFile, sampleRate, audioChannels, bitRate, durationMs);
-    }
-
     public static void generateSilentAudio(String outputFile, int sampleRate, int audioChannels, int bitRate, int durationMs) {
         try {
             // Prepare the recorder for the silent audio file

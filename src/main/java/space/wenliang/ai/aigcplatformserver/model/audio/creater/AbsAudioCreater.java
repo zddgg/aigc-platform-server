@@ -16,7 +16,7 @@ import java.util.Objects;
 @Slf4j
 public abstract class AbsAudioCreater implements IAudioCreater {
 
-    private final RestClient restClient;
+    public RestClient restClient;
 
     protected AbsAudioCreater(RestClient restClient) {
         this.restClient = restClient;
@@ -24,11 +24,18 @@ public abstract class AbsAudioCreater implements IAudioCreater {
 
     public abstract Map<String, Object> buildParams(AudioContext context);
 
+    @Override
+    public void pre(AudioContext context) {
+
+    }
+
     public byte[] createAudio(AudioContext context) {
+        pre(context);
+
         Map<String, Object> params = buildParams(context);
 
         ResponseEntity<byte[]> response = restClient.post()
-                .uri(context.getUrl())
+                .uri(context.getAudioServerConfig().getServerUrl())
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(params)
                 .retrieve()
@@ -47,10 +54,12 @@ public abstract class AbsAudioCreater implements IAudioCreater {
     }
 
     public void createFile(AudioContext context) {
+        pre(context);
+
         Map<String, Object> params = buildParams(context);
 
         ResponseEntity<byte[]> response = restClient.post()
-                .uri(context.getUrl())
+                .uri(context.getAudioServerConfig().getServerUrl())
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(params)
                 .retrieve()
@@ -63,7 +72,7 @@ public abstract class AbsAudioCreater implements IAudioCreater {
                     Files.createDirectories(path.getParent());
                 }
                 Files.write(path, response.getBody());
-                format(context);
+                post(context);
                 log.info("write file, context: {}", context);
             } catch (Exception e) {
                 log.error("write exception, context: {}", context, e);
@@ -77,5 +86,7 @@ public abstract class AbsAudioCreater implements IAudioCreater {
     }
 
     @Override
-    public abstract void format(AudioContext context) throws Exception;
+    public void post(AudioContext context) throws Exception {
+
+    }
 }

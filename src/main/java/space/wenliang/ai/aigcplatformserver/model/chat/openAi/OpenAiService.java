@@ -1,46 +1,38 @@
-package space.wenliang.ai.aigcplatformserver.model.chat.glm;
+package space.wenliang.ai.aigcplatformserver.model.chat.openAi;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
-import space.wenliang.ai.aigcplatformserver.model.chat.AiService;
+import space.wenliang.ai.aigcplatformserver.bean.model.ChatModelParam;
+import space.wenliang.ai.aigcplatformserver.model.chat.IAiService;
 
 import java.util.Map;
 import java.util.Objects;
 
 @Slf4j
-public class GlmAiService implements AiService {
-
-    @Value("${ai.glm.api-key:}")
-    private String apiKey;
-
-    @Value("${ai.glm.model}")
-    private String model;
-
-    @Value("${spring.ai.openai.chat.options.temperature}")
-    private Float temperature;
-
-    @Value("${spring.ai.openai.chat.options.max-tokens}")
-    private Integer maxTokens;
+@Service("OpenAi")
+public class OpenAiService implements IAiService {
 
     private final WebClient webClient;
 
-    public GlmAiService(WebClient webClient) {
+    public OpenAiService(WebClient webClient) {
         this.webClient = webClient;
     }
 
     @Override
-    public Flux<String> call(String systemMessage, String userMessage) {
+    public Flux<String> call(ChatModelParam param, String systemMessage, String userMessage) {
 
         JSONObject request = new JSONObject();
-        request.put("model", model);
+        request.put("model", param.getModel());
+        request.put("temperature", param.getTemperature());
+        request.put("max_tokens", param.getMaxTokens());
 
         JSONArray messages = new JSONArray();
         messages.add(Map.of("role", "system", "content", systemMessage));
@@ -48,8 +40,8 @@ public class GlmAiService implements AiService {
         request.put("messages", messages);
 
         return webClient.post()
-                .uri("https://open.bigmodel.cn/api/paas/v4/chat/completions")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
+                .uri(param.getHost() + param.getPath())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + param.getApiKey())
                 .bodyValue(request)
                 .retrieve()
                 .bodyToFlux(String.class)
@@ -57,13 +49,13 @@ public class GlmAiService implements AiService {
     }
 
     @Override
-    public Flux<String> stream(String systemMessage, String userMessage) {
+    public Flux<String> stream(ChatModelParam param, String systemMessage, String userMessage) {
 
         JSONObject request = new JSONObject();
-        request.put("model", model);
+        request.put("model", param.getModel());
         request.put("stream", true);
-        request.put("temperature", temperature);
-        request.put("max_tokens", maxTokens);
+        request.put("temperature", param.getTemperature());
+        request.put("max_tokens", param.getMaxTokens());
 
         JSONArray messages = new JSONArray();
         messages.add(Map.of("role", "system", "content", systemMessage));
@@ -71,16 +63,16 @@ public class GlmAiService implements AiService {
         request.put("messages", messages);
 
         return webClient.post()
-                .uri("https://open.bigmodel.cn/api/paas/v4/chat/completions")
+                .uri(param.getHost() + param.getPath())
                 .header(HttpHeaders.ACCEPT, MediaType.TEXT_EVENT_STREAM_VALUE)
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + param.getApiKey())
                 .bodyValue(request)
                 .retrieve()
                 .bodyToFlux(String.class)
                 .filter(s -> Objects.nonNull(s) && !StringUtils.equals(s, "[DONE]"))
-                .mapNotNull(s -> JSON.parseObject(s, GlmResponseBody.class))
-                .filter(glmResponseBody -> Objects.isNull(glmResponseBody.getChoices().getFirst().getFinish_reason()))
-                .mapNotNull(glmResponseBody -> glmResponseBody.getChoices().getFirst().getDelta().getContent())
+                .mapNotNull(s -> JSON.parseObject(s, OpenAiResponseBody.class))
+                .filter(openAiResponseBody -> Objects.isNull(openAiResponseBody.getChoices().getFirst().getFinish_reason()))
+                .mapNotNull(openAiResponseBody -> openAiResponseBody.getChoices().getFirst().getDelta().getContent())
                 .retry(0)
                 .doOnError(throwable -> log.error(throwable.getMessage(), throwable));
     }

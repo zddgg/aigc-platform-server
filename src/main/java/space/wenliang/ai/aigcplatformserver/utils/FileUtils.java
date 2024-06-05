@@ -61,17 +61,25 @@ public class FileUtils {
                 ;
     }
 
-    public static <T> T getObjectFromFile(Path path, Class<T> aClass) throws Exception {
-        if (Files.exists(path)) {
-            return JSON.parseObject(Optional.ofNullable(Files.readString(path)).orElse("[]"), aClass);
+    public static <T> T getObjectFromFile(Path path, Class<T> aClass) {
+        try {
+            if (Files.exists(path)) {
+                return JSON.parseObject(Optional.ofNullable(Files.readString(path)).orElse("[]"), aClass);
+            }
+            return aClass.getDeclaredConstructor().newInstance();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
-        return aClass.getDeclaredConstructor().newInstance();
     }
 
-    public static <T> List<T> getListFromFile(Path path, Class<T> aClass) throws Exception {
-        if (Files.exists(path)) {
-            return JSON.parseArray(Optional.ofNullable(Files.readString(path)).orElse("[]"), aClass);
+    public static <T> List<T> getListFromFile(Path path, Class<T> aClass) {
+        try {
+            if (Files.exists(path)) {
+                return JSON.parseArray(Optional.ofNullable(Files.readString(path)).orElse("[]"), aClass);
+            }
+            return new ArrayList<>();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
-        return new ArrayList<>();
     }
 }

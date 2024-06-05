@@ -3,10 +3,9 @@ package space.wenliang.ai.aigcplatformserver.bean.text;
 import lombok.Data;
 
 @Data
-public class Chapter {
+public class TextProject {
     private String project;
-    private String chapter;
     private Integer textNum;
-    private Integer roleNum;
+    private Integer RoleNum;
     private String stage;
 }

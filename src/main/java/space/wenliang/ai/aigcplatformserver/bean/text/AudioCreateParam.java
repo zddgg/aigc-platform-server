@@ -5,6 +5,6 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class AudioCreateParam extends Chapter{
+public class AudioCreateParam extends Chapter {
     private String actionType;
 }

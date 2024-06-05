@@ -1,10 +1,12 @@
 package space.wenliang.ai.aigcplatformserver.bean.text;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
-public class ChapterSplitVO {
-    private String project;
+@Getter
+@Setter
+public class ChapterSplitVO extends Chapter {
     private String chapterPattern;
     private String linesPattern;
+    private String textContent;
 }

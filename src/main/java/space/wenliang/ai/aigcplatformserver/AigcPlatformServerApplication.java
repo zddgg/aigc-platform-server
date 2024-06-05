@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class AigcPlatformServerApplication {
 
     public static void main(String[] args) {
+        System.setProperty("rm_model_dir", "/model");
         SpringApplication.run(AigcPlatformServerApplication.class, args);
     }
 

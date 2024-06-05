@@ -1,19 +1,23 @@
 package space.wenliang.ai.aigcplatformserver.model.audio;
 
 import lombok.Data;
+import space.wenliang.ai.aigcplatformserver.bean.model.AudioServerConfig;
 
 @Data
 public class AudioContext {
 
     private String text;
-    private String textLanguage;
+    private String textLang;
 
     private String type;
-    private String url;
+    private AudioServerConfig audioServerConfig;
+
+    private String modelGroup;
+    private String model;
 
     private String refAudioPath;
     private String refText;
-    private String refTextLanguage;
+    private String refTextLang;
 
     private String speaker;
 

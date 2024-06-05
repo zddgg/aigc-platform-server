@@ -24,14 +24,18 @@ public class ChapterInfo extends Role {
     private Boolean linesFlag = false;
 
     private Integer volume = 100;
-    private Integer speed = 1;
-    private Integer interval = 0;
+    private Double speed = 1.0;
+    private Integer interval = 500;
+    private Boolean export;
+
     private String textLang;
     private Boolean audioModifiedFlag = false;
 
     // 0-init, 1-created, 2-modified, 3-waiting, 4-processing
     private int audioStage;
     private String audioUrl;
+    private String audioPath;
+    private Long lengthInMs;
 
     public ChapterInfo(Integer p, Integer s, String text) {
         this.p = p;
@@ -77,5 +81,9 @@ public class ChapterInfo extends Role {
             return this.p + "-" + this.s;
         }
         return index;
+    }
+
+    public void setModified() {
+        this.setAudioStage(modified);
     }
 }

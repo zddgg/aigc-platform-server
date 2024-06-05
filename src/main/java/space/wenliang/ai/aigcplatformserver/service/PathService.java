@@ -14,8 +14,13 @@ public class PathService {
         this.pathConfig = pathConfig;
     }
 
+
     public Path buildModelPath(String... names) {
         return Path.of(pathConfig.getScModelDir(), names);
+    }
+
+    public Path buildRmModelPath(String... names) {
+        return Path.of(pathConfig.getRemoteModelDir(), names);
     }
 
     public Path buildProjectPath(String... names) {

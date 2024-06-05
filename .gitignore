@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### project ###
+/model/**
+/project/**

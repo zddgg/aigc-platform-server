@@ -17,18 +17,16 @@ import space.wenliang.ai.aigcplatformserver.exception.BizException;
 import space.wenliang.ai.aigcplatformserver.service.ChapterService;
 import space.wenliang.ai.aigcplatformserver.service.PathService;
 import space.wenliang.ai.aigcplatformserver.service.ProjectService;
+import space.wenliang.ai.aigcplatformserver.utils.AudioUtils;
 import space.wenliang.ai.aigcplatformserver.utils.ChapterUtil;
 import space.wenliang.ai.aigcplatformserver.utils.ForEach;
+import space.wenliang.ai.aigcplatformserver.utils.SubtitleUtil;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -53,15 +51,45 @@ public class TextChapterController {
 
     @PostMapping("queryChapters")
     public Result<Object> queryChapters(@RequestBody Chapter vo) throws IOException {
-        List<String> chapters = new ArrayList<>();
         Path projectPath = pathService.buildProjectPath("text", vo.getProject(), "章节");
+        List<Chapter> chapters = new ArrayList<>();
         if (Files.exists(projectPath)) {
-            chapters = Files.list(projectPath).map(path -> path.getFileName().toString()).toList();
+            chapters = Files.list(projectPath).map(path -> {
+                Chapter chapter = new Chapter();
+                chapter.setChapter(path.getFileName().toString());
+
+                try {
+                    Files.list(path).forEach(path1 -> {
+                        try {
+                            if (path1.getFileName().toString().equals("chapterInfo.json")) {
+                                List<ChapterInfo> chapterInfos = JSON.parseArray(Files.readString(path1), ChapterInfo.class);
+                                chapter.setTextNum(chapterInfos.size());
+                            }
+                            if (path1.getFileName().toString().equals("aiResult.json")) {
+                                chapter.setStage("处理中");
+                            }
+                            if (path1.getFileName().toString().equals("roles.json")) {
+                                List<Role> roles = JSON.parseArray(Files.readString(path1), Role.class);
+                                chapter.setRoleNum(roles.size());
+                            }
+                            if (path1.getFileName().toString().equals("output.wav")) {
+                                chapter.setStage("合并完成");
+                            }
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+
+                return chapter;
+            }).toList();
         }
-        List<String> sortList = chapters.stream()
-                .sorted(Comparator.comparingInt(s -> Integer.parseInt(s.split("--")[0])))
+        chapters = chapters.stream()
+                .sorted(Comparator.comparingInt(s -> Integer.parseInt(s.getChapter().split("--")[0])))
                 .toList();
-        return Result.success(sortList);
+        return Result.success(chapters);
     }
 
     @PostMapping("tmpChapterSplit")
@@ -87,7 +115,9 @@ public class TextChapterController {
         ForEach.forEach(chapterParses, (index, chapterParse) -> {
             try {
                 List<ChapterInfo> chapterInfos = ChapterUtil.parseChapterInfo(chapterParse.getContent(), List.of(vo.getLinesPattern()));
-                chapterInfos = chapterInfos.stream().peek(chapterInfo -> chapterInfo.setRoleInfo(new Role("旁白"))).toList();
+
+                Role asideRole = new Role("旁白");
+                chapterInfos = chapterInfos.stream().peek(chapterInfo -> chapterInfo.setRoleInfo(asideRole)).toList();
 
                 String chapterDirName = index + "--" + chapterParse.getTitle();
                 Path chapterDir = pathService.buildProjectPath("text", vo.getProject(), "章节", chapterDirName);
@@ -97,6 +127,9 @@ public class TextChapterController {
                 Path chapterInfoPath = Path.of(chapterDir.toAbsolutePath().toString(), "chapterInfo.json");
                 Files.write(chapterInfoPath, JSON.toJSONBytes(chapterInfos));
 
+                Path rolesPath = pathService.buildProjectPath("text", vo.getProject(), "章节", chapterDirName, "roles.json");
+                Files.write(rolesPath, JSON.toJSONBytes(List.of(asideRole)));
+
                 Path textPath = Path.of(chapterDir.toAbsolutePath().toString(), "章节原文.txt");
                 Files.write(textPath, chapterParse.getContent().getBytes());
             } catch (IOException e) {
@@ -104,6 +137,50 @@ public class TextChapterController {
             }
         });
 
+        return Result.success();
+    }
+
+    @PostMapping("queryChapterText")
+    public Result<Object> queryChapterText(@RequestBody Chapter vo) throws IOException {
+        Path path = pathService.buildProjectPath("text", vo.getProject(), "章节", vo.getChapter(), "章节原文.txt");
+        if (Files.exists(path)) {
+            return Result.success(Files.readString(path));
+        }
+        return Result.success();
+    }
+
+    @PostMapping("tmpLinesParse")
+    public Result<Object> tmpLinesParse(@RequestBody ChapterSplitVO vo) throws IOException {
+
+        if (StringUtils.isNotBlank(vo.getTextContent())) {
+            List<ChapterInfo> chapterInfos = ChapterUtil.parseChapterInfo(vo.getTextContent(), List.of(vo.getLinesPattern()));
+            List<String> lines = chapterInfos.stream().filter(ChapterInfo::getLinesFlag).map(ChapterInfo::getText).toList();
+            return Result.success(lines);
+        }
+        return Result.success();
+    }
+
+    @PostMapping("linesParse")
+    public Result<Object> linesParse(@RequestBody ChapterSplitVO vo) throws IOException {
+        if (StringUtils.isNotBlank(vo.getTextContent())) {
+            try {
+
+                List<ChapterInfo> chapterInfos = ChapterUtil.parseChapterInfo(vo.getTextContent(), List.of(vo.getLinesPattern()));
+
+                Role asideRole = new Role("旁白");
+                chapterInfos = chapterInfos.stream().peek(chapterInfo -> chapterInfo.setRoleInfo(asideRole)).toList();
+                Path chapterInfoPath = pathService.buildProjectPath("text", vo.getProject(), "章节", vo.getChapter(), "chapterInfo.json");
+                Files.write(chapterInfoPath, JSON.toJSONBytes(chapterInfos));
+
+                Path rolesPath = pathService.buildProjectPath("text", vo.getProject(), "章节", vo.getChapter(), "roles.json");
+                Files.write(rolesPath, JSON.toJSONBytes(List.of(asideRole)));
+
+                Path textPath = pathService.buildProjectPath("text", vo.getProject(), "章节", vo.getChapter(), "章节原文.txt");
+                Files.write(textPath, vo.getTextContent().getBytes());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
         return Result.success();
     }
 
@@ -136,43 +213,31 @@ public class TextChapterController {
             }
         }
 
-        if (!CollectionUtils.isEmpty(vo.getIndexes())) {
-            chapterInfos = chapterInfos.stream()
-                    .filter(chapterInfo -> vo.getIndexes().contains(chapterInfo.getIndex()))
-                    .toList();
-        }
-
         return Result.success(chapterInfos);
-    }
-
-    @PostMapping("linesParse")
-    public Result<Object> linesParse(@RequestBody Chapter vo) throws IOException {
-        if (StringUtils.isNotBlank(vo.getProject()) && StringUtils.isNotBlank(vo.getChapter())) {
-            Path chapterInfoPath = pathService.buildProjectPath("text", vo.getProject(), "章节", vo.getChapter(), "chapterInfo.json");
-            if (Files.exists(chapterInfoPath)) {
-                List<ChapterInfo> chapterInfos = JSON.parseArray(Files.readString(chapterInfoPath), ChapterInfo.class);
-                Map<Integer, List<ChapterInfo>> chapterInfoMap = chapterInfos.stream().collect(Collectors.groupingBy(ChapterInfo::getP));
-
-                List<ChapterInfo> save = new ArrayList<>();
-                for (Map.Entry<Integer, List<ChapterInfo>> entry : chapterInfoMap.entrySet()) {
-                    StringBuilder pText = new StringBuilder();
-                    entry.getValue().stream().sorted(Comparator.comparingInt(ChapterInfo::getS))
-                            .map(ChapterInfo::getText)
-                            .forEach(pText::append);
-                    List<ChapterInfo> saveItem = ChapterUtil.parseLineInfo(entry.getKey(), pText.toString(), List.of("“”"));
-                    saveItem = saveItem.stream().peek(c -> c.setRoleInfo(new Role("未知"))).toList();
-                    save.addAll(saveItem);
-                }
-                Files.write(chapterInfoPath, JSON.toJSONBytes(save));
-            }
-        }
-
-        return Result.success();
     }
 
     @PostMapping(value = "aiInference")
     public Flux<String> aiInference(@RequestBody Chapter vo) throws IOException {
         return chapterService.linesAnalysis(vo.getProject(), vo.getChapter(), true);
+    }
+
+    @PostMapping(value = "checkAiResult")
+    public Result<Object> checkAiResult(@RequestBody Chapter vo) throws IOException {
+        Path aiResultPath = pathService.getAiResultPath(vo.getProject(), vo.getChapter());
+        if (Files.exists(aiResultPath) && StringUtils.isNotBlank(Files.readString(aiResultPath))) {
+            return Result.success(true);
+        }
+        return Result.success(false);
+    }
+
+    @PostMapping(value = "loadAiResult")
+    public Result<Object> loadAiResult(@RequestBody Chapter vo) throws IOException {
+        Path aiResultPath = pathService.getAiResultPath(vo.getProject(), vo.getChapter());
+        if (Files.exists(aiResultPath) && StringUtils.isNotBlank(Files.readString(aiResultPath))) {
+            String string = Files.readString(aiResultPath);
+            chapterService.mergeAiResultInfo(vo.getProject(), vo.getChapter(), string);
+        }
+        return Result.success();
     }
 
     @PostMapping(value = "queryRoles")
@@ -250,11 +315,7 @@ public class TextChapterController {
 
     @PostMapping(value = "startCreateAudio")
     public Result<Object> startCreateAudio(@RequestBody AudioCreateParam param) throws IOException {
-        CompletableFuture.runAsync(() -> chapterService.startCreateAudio(param))
-                .exceptionally(e -> {
-                    log.error(e.getMessage(), e);
-                    return null;
-                });
+        chapterService.startCreateAudio(param);
         return Result.success("正在生成中");
     }
 
@@ -264,5 +325,131 @@ public class TextChapterController {
         ChapterInfo chapterInfo = param.getChapterInfo();
         chapterService.createAudio(chapter.getProject(), chapter.getChapter(), chapterInfo);
         return Result.success(chapterInfo);
+    }
+
+    @PostMapping(value = "stopCreateAudio")
+    public Result<Object> stopCreateAudio() throws Exception {
+        chapterService.stopCreateAudio();
+        return Result.success();
+    }
+
+    @PostMapping(value = "updateVolume")
+    public Result<Object> updateVolume(@RequestBody ChapterInfoParam param) throws IOException {
+        Chapter chapter = param.getChapter();
+        ChapterInfo chapterInfo = param.getChapterInfo();
+        List<ChapterInfo> chapterInfos = chapterService.getChapterInfos(chapter.getProject(), chapter.getChapter());
+        for (ChapterInfo item : chapterInfos) {
+            if (Objects.equals(chapterInfo.getP(), item.getP())
+                    && Objects.equals(chapterInfo.getS(), item.getS())) {
+                item.setVolume(chapterInfo.getVolume());
+                item.setModified();
+            }
+        }
+        chapterService.saveChapterInfos(chapter.getProject(), chapter.getChapter(), chapterInfos);
+        return Result.success();
+    }
+
+    @PostMapping(value = "updateSpeed")
+    public Result<Object> updateSpeed(@RequestBody ChapterInfoParam param) throws IOException {
+        Chapter chapter = param.getChapter();
+        ChapterInfo chapterInfo = param.getChapterInfo();
+        List<ChapterInfo> chapterInfos = chapterService.getChapterInfos(chapter.getProject(), chapter.getChapter());
+        for (ChapterInfo item : chapterInfos) {
+            if (Objects.equals(chapterInfo.getP(), item.getP())
+                    && Objects.equals(chapterInfo.getS(), item.getS())) {
+                item.setSpeed(chapterInfo.getSpeed());
+                item.setModified();
+            }
+        }
+        chapterService.saveChapterInfos(chapter.getProject(), chapter.getChapter(), chapterInfos);
+        return Result.success();
+    }
+
+    @PostMapping(value = "updateInterval")
+    public Result<Object> updateInterval(@RequestBody ChapterInfoParam param) throws IOException {
+        Chapter chapter = param.getChapter();
+        ChapterInfo chapterInfo = param.getChapterInfo();
+        List<ChapterInfo> chapterInfos = chapterService.getChapterInfos(chapter.getProject(), chapter.getChapter());
+        for (ChapterInfo item : chapterInfos) {
+            if (Objects.equals(chapterInfo.getP(), item.getP())
+                    && Objects.equals(chapterInfo.getS(), item.getS())) {
+                item.setInterval(chapterInfo.getInterval());
+                item.setModified();
+            }
+        }
+        chapterService.saveChapterInfos(chapter.getProject(), chapter.getChapter(), chapterInfos);
+        return Result.success();
+    }
+
+    @PostMapping(value = "chapterExpose")
+    public Result<Object> chapterExpose(@RequestBody ChapterExpose chapterExpose) throws IOException {
+        Chapter chapter = chapterExpose.getChapter();
+        List<String> indexes = chapterExpose.getIndexes();
+        Boolean subtitle = chapterExpose.getSubtitle();
+
+        if (CollectionUtils.isEmpty(indexes)) {
+            return Result.success();
+        }
+
+        List<String> dirs = List.of("text", chapter.getProject(), "章节", chapter.getChapter(), "audio");
+        Path outputDir = pathService.buildProjectPath(dirs.toArray(new String[0]));
+
+        Map<String, String> fileNameMap = new HashMap<>();
+        if (Files.exists(outputDir)) {
+            fileNameMap = Files.list(outputDir).map(file -> file.getFileName().toString())
+                    .filter(s -> s.endsWith(".wav"))
+                    .filter(s -> s.split("-").length > 2)
+                    .collect(Collectors.toMap((String fileName) -> fileName.split("-")[0] + "-" + fileName.split("-")[1],
+                            Function.identity(), (oldValue, newValue) -> newValue));
+        }
+
+
+        List<ChapterInfo> handleList = new ArrayList<>();
+        List<ChapterInfo> chapterInfos = chapterService.getChapterInfos(chapter.getProject(), chapter.getChapter());
+        for (ChapterInfo item : chapterInfos) {
+            String key = item.getP() + "-" + item.getS();
+            if (indexes.contains(key) && StringUtils.isNotBlank(item.getModelType())) {
+                item.setExport(true);
+                if (fileNameMap.containsKey(key)) {
+                    List<String> itemDirs = new ArrayList<>(dirs);
+                    itemDirs.add(fileNameMap.get(key));
+                    item.setAudioPath(pathService.buildProjectPath(itemDirs.toArray(new String[0])).toAbsolutePath().toString());
+                    handleList.add(item);
+                }
+            } else {
+                item.setExport(false);
+            }
+        }
+
+        Path outputWavPath = pathService.buildProjectPath("text", chapter.getProject(), "章节", chapter.getChapter(), "output.wav");
+        AudioUtils.mergeAudioFiles(handleList, outputWavPath.toAbsolutePath().toString());
+
+        Map<String, ChapterInfo> collect = handleList.stream()
+                .collect(Collectors.toMap(v -> v.getP() + "-" + v.getS(), Function.identity()));
+
+        for (ChapterInfo chapterInfo : chapterInfos) {
+            String key = chapterInfo.getP() + "-" + chapterInfo.getS();
+            if (collect.containsKey(key)) {
+                chapterInfo.setLengthInMs(collect.get(key).getLengthInMs());
+            }
+        }
+
+        chapterService.saveChapterInfos(chapter.getProject(), chapter.getChapter(), chapterInfos);
+
+        Path archiveWavPath = pathService.buildProjectPath("text", chapter.getProject(), "output", chapter.getChapter() + ".wav");
+        if (Files.notExists(archiveWavPath.getParent())) {
+            Files.createDirectories(archiveWavPath.getParent());
+        }
+        Files.copy(outputWavPath, archiveWavPath);
+
+        if (subtitle) {
+            Path outputSrtPath = pathService.buildProjectPath("text", chapter.getProject(), "章节", chapter.getChapter(), "output.srt");
+            SubtitleUtil.srtFile(handleList, outputSrtPath);
+
+            Path archiveSrtPath = pathService.buildProjectPath("text", chapter.getProject(), "output", chapter.getChapter() + ".srt");
+            Files.copy(outputSrtPath, archiveSrtPath);
+        }
+
+        return Result.success();
     }
 }
