@@ -112,9 +112,14 @@ public class TextChapterController {
             }
         }
 
+        List<String> linesModifiers = new ArrayList<>();
+        if (StringUtils.isNotBlank(vo.getLinesPattern())) {
+            linesModifiers.add(vo.getLinesPattern());
+        }
+
         ForEach.forEach(chapterParses, (index, chapterParse) -> {
             try {
-                List<ChapterInfo> chapterInfos = ChapterUtil.parseChapterInfo(chapterParse.getContent(), List.of(vo.getLinesPattern()));
+                List<ChapterInfo> chapterInfos = ChapterUtil.parseChapterInfo(chapterParse.getContent(), linesModifiers);
 
                 Role asideRole = new Role("旁白");
                 chapterInfos = chapterInfos.stream().peek(chapterInfo -> chapterInfo.setRoleInfo(asideRole)).toList();
@@ -153,7 +158,11 @@ public class TextChapterController {
     public Result<Object> tmpLinesParse(@RequestBody ChapterSplitVO vo) throws IOException {
 
         if (StringUtils.isNotBlank(vo.getTextContent())) {
-            List<ChapterInfo> chapterInfos = ChapterUtil.parseChapterInfo(vo.getTextContent(), List.of(vo.getLinesPattern()));
+            List<String> linesModifiers = new ArrayList<>();
+            if (StringUtils.isNotBlank(vo.getLinesPattern())) {
+                linesModifiers.add(vo.getLinesPattern());
+            }
+            List<ChapterInfo> chapterInfos = ChapterUtil.parseChapterInfo(vo.getTextContent(), linesModifiers);
             List<String> lines = chapterInfos.stream().filter(ChapterInfo::getLinesFlag).map(ChapterInfo::getText).toList();
             return Result.success(lines);
         }
@@ -165,7 +174,11 @@ public class TextChapterController {
         if (StringUtils.isNotBlank(vo.getTextContent())) {
             try {
 
-                List<ChapterInfo> chapterInfos = ChapterUtil.parseChapterInfo(vo.getTextContent(), List.of(vo.getLinesPattern()));
+                List<String> linesModifiers = new ArrayList<>();
+                if (StringUtils.isNotBlank(vo.getLinesPattern())) {
+                    linesModifiers.add(vo.getLinesPattern());
+                }
+                List<ChapterInfo> chapterInfos = ChapterUtil.parseChapterInfo(vo.getTextContent(),linesModifiers);
 
                 Role asideRole = new Role("旁白");
                 chapterInfos = chapterInfos.stream().peek(chapterInfo -> chapterInfo.setRoleInfo(asideRole)).toList();
@@ -315,8 +328,8 @@ public class TextChapterController {
 
     @PostMapping(value = "startCreateAudio")
     public Result<Object> startCreateAudio(@RequestBody AudioCreateParam param) throws IOException {
-        chapterService.startCreateAudio(param);
-        return Result.success("正在生成中");
+        int taskNum = chapterService.startCreateAudio(param);
+        return Result.success(taskNum);
     }
 
     @PostMapping(value = "createAudio")
@@ -378,6 +391,27 @@ public class TextChapterController {
             }
         }
         chapterService.saveChapterInfos(chapter.getProject(), chapter.getChapter(), chapterInfos);
+        return Result.success();
+    }
+
+    @PostMapping(value = "updateControls")
+    public Result<Object> updateControls(@RequestBody ControlsUpdateVO vo) throws IOException {
+        List<ChapterInfo> chapterInfos = chapterService.getChapterInfos(vo.getProject(), vo.getChapter());
+        for (ChapterInfo item : chapterInfos) {
+            if (Objects.equals(vo.getEnableVolume(), Boolean.TRUE)) {
+                item.setVolume(vo.getVolume());
+                item.setModified();
+            }
+            if (Objects.equals(vo.getEnableSpeed(), Boolean.TRUE)) {
+                item.setSpeed(vo.getSpeed());
+                item.setModified();
+            }
+            if (Objects.equals(vo.getEnableInterval(), Boolean.TRUE)) {
+                item.setInterval(vo.getInterval());
+                item.setModified();
+            }
+        }
+        chapterService.saveChapterInfos(vo.getProject(), vo.getChapter(), chapterInfos);
         return Result.success();
     }
 

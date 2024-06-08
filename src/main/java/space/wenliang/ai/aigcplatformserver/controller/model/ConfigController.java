@@ -1,29 +1,38 @@
 package space.wenliang.ai.aigcplatformserver.controller.model;
 
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
+import io.vavr.Tuple3;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.util.CollectionUtils;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import space.wenliang.ai.aigcplatformserver.bean.model.*;
 import space.wenliang.ai.aigcplatformserver.common.Result;
 import space.wenliang.ai.aigcplatformserver.exception.BizException;
 import space.wenliang.ai.aigcplatformserver.service.ConfigService;
+import space.wenliang.ai.aigcplatformserver.service.ModelService;
+import space.wenliang.ai.aigcplatformserver.service.PathService;
+import space.wenliang.ai.aigcplatformserver.utils.FileUtils;
 import space.wenliang.ai.aigcplatformserver.utils.IdUtil;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("config")
 public class ConfigController {
 
+    private final PathService pathService;
     private final ConfigService configService;
+    private final ModelService modelService;
 
-    public ConfigController(ConfigService configService) {
+    public ConfigController(PathService pathService, ConfigService configService, ModelService modelService) {
+        this.pathService = pathService;
         this.configService = configService;
+        this.modelService = modelService;
     }
 
     @PostMapping("chat/queryChatConfig")
@@ -110,13 +119,20 @@ public class ConfigController {
         return Result.success();
     }
 
-    @PostMapping("edge-tts/config")
+    @PostMapping("edge-tts/queryEdgeTtsConfig")
     public Result<Object> queryEdgeTtsConfig() throws Exception {
         EdgeTtsConfig edgeTtsConfig = configService.getEdgeTtsConfig();
-        List<EdgeTtsVoice> voices = edgeTtsConfig.getVoices()
-                .stream().filter(v -> List.of("zh", "en", "ja", "ko").contains(v.getLocale().substring(0, v.getLocale().indexOf('-'))))
-                .toList();
         List<EdgeTtsConfig.LangText> langTexts = edgeTtsConfig.getLangTexts();
+        List<String> filters = langTexts.stream()
+                .filter(l -> Objects.equals(l.getShow(), Boolean.TRUE))
+                .map(EdgeTtsConfig.LangText::getEnName)
+                .toList();
+
+
+        List<EdgeTtsVoice> voices = edgeTtsConfig.getVoices()
+                .stream()
+                .filter(v -> filters.contains(v.getLocale().substring(0, v.getLocale().indexOf('-'))))
+                .toList();
 
         List<EdgeTtsConfig.LangText> addLangTexts = voices.stream()
                 .map(EdgeTtsVoice::getLocale)
@@ -129,9 +145,24 @@ public class ConfigController {
                     return langText;
                 }).toList();
         langTexts.addAll(addLangTexts);
-        langTexts.sort(Comparator.comparing(v -> !List.of("zh", "en", "ja", "ko").contains(v.getEnName())));
+        langTexts.sort(Comparator.comparing(v -> !filters.contains(v.getEnName())));
+
+        Map<String, Tuple3<String, String, String>> etAudiomap = modelService.getAudios().stream()
+                .filter(refAudio -> StringUtils.equals(refAudio.getGroup(), "edge-tts"))
+                .collect(Collectors.toMap(RefAudio::getName,
+                        v -> Tuple.of(v.getMoods().getFirst().getMoodAudios().getFirst().getUrl(),
+                                v.getMoods().getFirst().getMoodAudios().getFirst().getText(),
+                                v.getAvatar())));
+
         voices = voices.stream()
-                .sorted(Comparator.comparing(v -> !List.of("zh", "en", "ja", "ko").contains(v.getLocale().substring(0, v.getLocale().indexOf('-')))))
+                .peek(voice -> {
+                    if (etAudiomap.containsKey(voice.getShortName())) {
+                        voice.setUrl(etAudiomap.get(voice.getShortName())._1);
+                        voice.setText(etAudiomap.get(voice.getShortName())._2);
+                        voice.setAvatar(etAudiomap.get(voice.getShortName())._3);
+                    }
+                })
+                .sorted(Comparator.comparing(v -> !filters.contains(v.getLocale().substring(0, v.getLocale().indexOf('-')))))
                 .toList();
 
         edgeTtsConfig.setVoices(voices);
@@ -158,10 +189,89 @@ public class ConfigController {
             if (StringUtils.equals(text.getEnName(), langText.getEnName())) {
                 text.setZhName(langText.getZhName());
                 text.setText(langText.getText());
+                text.setShow(langText.getShow());
             }
         }
 
         configService.saveEdgeTtsConfig(edgeTtsConfig);
+        return Result.success();
+    }
+
+    @PostMapping("chat-tts/queryChatTtsConfig")
+    public Result<Object> queryChatTtsConfig() throws Exception {
+        List<ChatTtsConfig> chatTtsConfigs = configService.getChatTtsConfig();
+
+        Map<String, Tuple2<String, String>> audiomap = modelService.getAudios().stream()
+                .filter(refAudio -> StringUtils.equals(refAudio.getGroup(), "chat-tts"))
+                .collect(Collectors.toMap(RefAudio::getName,
+                        v -> Tuple.of(v.getMoods().getFirst().getMoodAudios().getFirst().getUrl(),
+                                v.getMoods().getFirst().getMoodAudios().getFirst().getText())));
+
+        chatTtsConfigs = chatTtsConfigs.stream()
+                .peek(config -> {
+                    if (audiomap.containsKey(config.getConfigName())) {
+                        config.setUrl(audiomap.get(config.getConfigName())._1);
+                        config.setText(audiomap.get(config.getConfigName())._2);
+                    }
+                })
+                .toList();
+
+        return Result.success(chatTtsConfigs);
+    }
+
+    @PostMapping("chat-tts/createChatTtsConfig")
+    public Result<Object> createChatTtsConfig(@RequestParam("configName") String configName,
+                                              @RequestParam("saveAudio") Boolean saveAudio,
+                                              @RequestParam("temperature") Float temperature,
+                                              @RequestParam("top_P") Float top_P,
+                                              @RequestParam("top_K") Integer top_K,
+                                              @RequestParam("audio_seed_input") Integer audio_seed_input,
+                                              @RequestParam("text_seed_input") Integer text_seed_input,
+                                              @RequestParam("refine_text_flag") Boolean refine_text_flag,
+                                              @RequestParam("params_refine_text") String params_refine_text,
+                                              @RequestParam(value = "file", required = false) MultipartFile file,
+                                              @RequestParam(value = "outputText", required = false) String outputText) throws Exception {
+        List<ChatTtsConfig> chatTtsConfigs = configService.getChatTtsConfig();
+        if (CollectionUtils.isEmpty(chatTtsConfigs)) {
+            chatTtsConfigs = new ArrayList<>();
+        }
+        chatTtsConfigs.stream().filter(v -> StringUtils.equals(v.getConfigName(), configName))
+                .findAny().ifPresent(r -> {
+                    throw new BizException("配置名称[" + configName + "]已存在");
+                });
+
+        ChatTtsConfig chatTtsConfig = new ChatTtsConfig();
+        chatTtsConfig.setConfigName(configName);
+        chatTtsConfig.setTemperature(temperature);
+        chatTtsConfig.setTop_P(top_P);
+        chatTtsConfig.setTop_K(top_K);
+        chatTtsConfig.setAudio_seed_input(audio_seed_input);
+        chatTtsConfig.setText_seed_input(text_seed_input);
+        chatTtsConfig.setRefine_text_flag(refine_text_flag);
+        chatTtsConfig.setParams_refine_text(params_refine_text);
+
+        chatTtsConfigs.add(chatTtsConfig);
+        configService.saveChatTtsConfig(chatTtsConfigs);
+
+        if (Objects.equals(saveAudio, Boolean.TRUE) && file != null && StringUtils.isNotBlank(outputText)) {
+            String fileName = FileUtils.fileNameFormat(outputText);
+            Path voiceAudioDir = pathService.buildModelPath("ref-audio", "chat-tts", configName, "默认", fileName + ".wav");
+            if (Files.notExists(voiceAudioDir.getParent())) {
+                Files.createDirectories(voiceAudioDir.getParent());
+            }
+            Files.write(voiceAudioDir, file.getBytes());
+        }
+
+        return Result.success();
+    }
+
+    @PostMapping("chat-tts/deleteChatTtsConfig")
+    public Result<Object> deleteChatTtsConfig(@RequestBody ChatTtsConfig config) throws Exception {
+        List<ChatTtsConfig> chatTtsConfigs = configService.getChatTtsConfig();
+        chatTtsConfigs = chatTtsConfigs.stream()
+                .filter(c -> !StringUtils.equals(c.getConfigName(), config.getConfigName()))
+                .toList();
+        configService.saveChatTtsConfig(chatTtsConfigs);
         return Result.success();
     }
 }

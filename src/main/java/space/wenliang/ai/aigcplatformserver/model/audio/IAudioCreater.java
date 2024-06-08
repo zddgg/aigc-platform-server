@@ -1,10 +1,12 @@
 package space.wenliang.ai.aigcplatformserver.model.audio;
 
+import org.springframework.http.ResponseEntity;
+
 public interface IAudioCreater {
 
     void pre(AudioContext context) throws Exception;
 
-    byte[] createAudio(AudioContext context);
+    ResponseEntity<byte[]> createAudio(AudioContext context);
 
     void createFile(AudioContext context);
 

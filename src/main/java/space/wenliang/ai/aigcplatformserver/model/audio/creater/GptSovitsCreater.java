@@ -97,16 +97,17 @@ public class GptSovitsCreater extends AbsAudioCreater {
                     });
                 }
 
-                log.info("开始切换GptWeights模型");
+                log.info("开始切换GptWeights模型, {}", gpt_weights.get());
                 restTemplate.getForEntity(
                         uri.getScheme() + "://" + uri.getHost() + ":" + uri.getPort()
                                 + "/set_gpt_weights?weights_path=" + gpt_weights.get(), String.class);
 
+                log.info("开始切换SovitsWeights模型, {}", sovits_weights.get());
                 restTemplate.getForEntity(
                         uri.getScheme() + "://" + uri.getHost() + ":" + uri.getPort()
                                 + "/set_sovits_weights?weights_path=" + sovits_weights.get(), String.class
                 );
-                log.info("切换GptWeights模型成功");
+                log.info("切换模型成功");
             } catch (Exception e) {
                 log.error("切换GptWeights模型失败", e);
                 throw new RuntimeException(e.getMessage());

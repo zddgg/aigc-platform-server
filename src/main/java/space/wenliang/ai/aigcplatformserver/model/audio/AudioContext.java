@@ -2,6 +2,7 @@ package space.wenliang.ai.aigcplatformserver.model.audio;
 
 import lombok.Data;
 import space.wenliang.ai.aigcplatformserver.bean.model.AudioServerConfig;
+import space.wenliang.ai.aigcplatformserver.bean.model.ChatTtsConfig;
 
 @Data
 public class AudioContext {
@@ -24,4 +25,6 @@ public class AudioContext {
     private String mediaType;
     private String outputDir;
     private String outputName;
+
+    private ChatTtsConfig chatTtsConfig;
 }

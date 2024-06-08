@@ -6,8 +6,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import space.wenliang.ai.aigcplatformserver.bean.text.TextProject;
 import space.wenliang.ai.aigcplatformserver.common.Result;
-import space.wenliang.ai.aigcplatformserver.config.PathConfig;
 import space.wenliang.ai.aigcplatformserver.exception.BizException;
 import space.wenliang.ai.aigcplatformserver.service.PathService;
 import space.wenliang.ai.aigcplatformserver.spring.annotation.SingleValueParam;
@@ -24,11 +24,9 @@ import java.util.List;
 @RequestMapping("text/project")
 public class TextProjectController {
 
-    private final PathConfig pathConfig;
     private final PathService pathService;
 
-    public TextProjectController(PathConfig pathConfig, PathService pathService) {
-        this.pathConfig = pathConfig;
+    public TextProjectController(PathService pathService) {
         this.pathService = pathService;
     }
 
@@ -51,7 +49,7 @@ public class TextProjectController {
     @PostMapping("list")
     public Result<Object> list() {
         Path textProjectPath = pathService.buildProjectPath("text");
-        List<String> projects = Files.list(textProjectPath)
+        List<TextProject> projects = Files.list(textProjectPath)
                 .filter(Files::isDirectory)
                 .sorted(Comparator.comparing(path -> {
                     try {
@@ -61,30 +59,20 @@ public class TextProjectController {
                     }
                 }))
                 .map(path -> {
-//                    TextProject textProject = new TextProject();
-//                    textProject.setProject(path.getFileName().toString());
-//                    try {
-//                        Files.list(path).forEach(path1 -> {
-//                            try {
-//                                if (path1.getFileName().toString().equals("chapterInfo.json")) {
-//                                    List<ChapterInfo> chapterInfos = JSON.parseArray(Files.readString(path1), ChapterInfo.class);
-//                                    textProject.setTextNum(chapterInfos.size());
-//                                }
-//                                if (path1.getFileName().toString().equals("roles.json")) {
-//                                    List<Role> roles = JSON.parseArray(Files.readString(path1), Role.class);
-//                                    textProject.setRoleNum(roles.size());
-//                                }
-//                                if (path1.getFileName().toString().equals("output.wav")) {
-//                                    textProject.setStage("合并完成");
-//                                }
-//                            } catch (Exception e) {
-//                                throw new RuntimeException(e);
-//                            }
-//                        });
-//                    } catch (Exception e) {
-//                        throw new RuntimeException(e);
-//                    }
-                    return path.getFileName().toString();
+                    TextProject textProject = new TextProject();
+                    textProject.setProject(path.getFileName().toString());
+                    try {
+                        Path path1 = Path.of(path.toAbsolutePath().toString(), "章节");
+                        if (Files.exists(path1)) {
+                            int chapterNum = Files.list(path1)
+                                    .filter(Files::isDirectory)
+                                    .toList().size();
+                            textProject.setChapterNum(chapterNum);
+                        }
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                    return textProject;
                 })
                 .toList();
         return Result.success(projects);

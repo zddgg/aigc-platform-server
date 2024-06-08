@@ -13,7 +13,6 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
-import space.wenliang.ai.aigcplatformserver.bean.model.AudioServerConfig;
 import space.wenliang.ai.aigcplatformserver.bean.text.*;
 import space.wenliang.ai.aigcplatformserver.config.PathConfig;
 import space.wenliang.ai.aigcplatformserver.exception.BizException;
@@ -44,7 +43,6 @@ public class ChapterService {
     private final ProjectService projectService;
     private final AudioCreater audioCreater;
     private final AudioProcessWebSocketHandler audioProcessWebSocketHandler;
-    private final ConfigService configService;
 
     public ChapterService(AiService aiService,
                           PathConfig pathConfig,
@@ -58,7 +56,6 @@ public class ChapterService {
         this.projectService = projectService;
         this.audioCreater = audioCreater;
         this.audioProcessWebSocketHandler = audioProcessWebSocketHandler;
-        this.configService = configService;
     }
 
     @PostConstruct
@@ -210,7 +207,7 @@ public class ChapterService {
                     hasAside = true;
                 }
                 if (commonRoleMap.containsKey(role)) {
-                    chapterInfo.setModelSelect(commonRoleMap.get(role));
+                    chapterInfo.setModelConfig(commonRoleMap.get(role));
                 }
                 chapterInfo.setRoleInfo(roleMap.get(role));
             }
@@ -223,7 +220,7 @@ public class ChapterService {
 
             for (Role role : roles) {
                 if (commonRoleMap.containsKey(role.getRole())) {
-                    role.setModelSelect(commonRoleMap.get(role.getRole()));
+                    role.setModelConfig(commonRoleMap.get(role.getRole()));
                 }
             }
 
@@ -360,7 +357,7 @@ public class ChapterService {
         for (ChapterInfo chapterInfo : chapterInfos) {
             if (Objects.equals(chapterInfo.getP(), newChapterInfo.getP())
                     && Objects.equals(chapterInfo.getS(), newChapterInfo.getS())) {
-                chapterInfo.setModelSelect(newChapterInfo);
+                chapterInfo.setModelConfig(newChapterInfo);
             }
         }
         this.saveChapterInfos(chapter.getProject(), chapter.getChapter(), chapterInfos);
@@ -372,7 +369,7 @@ public class ChapterService {
         List<Role> roles = this.getRoles(chapter.getProject(), chapter.getChapter());
         for (Role role : roles) {
             if (StringUtils.equals(newRole.getRole(), role.getRole())) {
-                role.setModelSelect(newRole);
+                role.setModelConfig(newRole);
             }
         }
         this.saveRoles(chapter.getProject(), chapter.getChapter(), roles);
@@ -380,7 +377,7 @@ public class ChapterService {
         List<ChapterInfo> chapterInfos = this.getChapterInfos(chapter.getProject(), chapter.getChapter());
         for (ChapterInfo chapterInfo : chapterInfos) {
             if (StringUtils.equals(newRole.getRole(), chapterInfo.getRole())) {
-                chapterInfo.setModelSelect(newRole);
+                chapterInfo.setModelConfig(newRole);
             }
         }
         this.saveChapterInfos(chapter.getProject(), chapter.getChapter(), chapterInfos);
@@ -406,7 +403,7 @@ public class ChapterService {
                     && Objects.equals(chapterInfo.getS(), newChapterInfo.getS())) {
                 chapterInfo.setRoleInfo(newChapterInfo);
                 if (Objects.equals(loadModel, Boolean.TRUE)) {
-                    chapterInfo.setModelSelect(newChapterInfo);
+                    chapterInfo.setModelConfig(newChapterInfo);
                 }
                 if (StringUtils.equals(newChapterInfo.getRole(), "旁白")) {
                     chapterInfo.setLinesFlag(false);
@@ -477,7 +474,7 @@ public class ChapterService {
             for (ChapterInfo chapterInfo : chapterInfos) {
                 if (StringUtils.equals(chapterInfo.getRole(), roleRename.getRole())) {
                     chapterInfo.setRoleInfo(exist.get());
-                    chapterInfo.setModelSelect(exist.get());
+                    chapterInfo.setModelConfig(exist.get());
                     if (StringUtils.equals(roleRename.getNewRole(), "旁白")) {
                         chapterInfo.setLinesFlag(false);
                     }
@@ -494,7 +491,7 @@ public class ChapterService {
         List<Role> commonRoles = projectService.getCommonRoles(chapter.getProject());
         for (Role commonRole : commonRoles) {
             if (StringUtils.equals(commonRole.getRole(), role.getRole())) {
-                commonRole.setModelSelect(role);
+                commonRole.setModelConfig(role);
             }
         }
         projectService.saveCommonRoles(chapter.getProject(), commonRoles);
@@ -531,7 +528,7 @@ public class ChapterService {
 
     public static final LinkedBlockingDeque<AudioCreateTask> audioCreateTaskQueue = new LinkedBlockingDeque<>();
 
-    public void startCreateAudio(AudioCreateParam param) {
+    public int startCreateAudio(AudioCreateParam param) {
         try {
             List<ChapterInfo> chapterInfos = this.getChapterInfos(param.getProject(), param.getChapter())
                     .stream().filter(c -> StringUtils.isNotBlank(c.getModelType())).toList();
@@ -550,7 +547,7 @@ public class ChapterService {
             }
 
             log.info("批量生成任务提交成功");
-
+            return chapterInfos.size();
         } catch (Exception e) {
             log.error(e.getMessage());
             throw new RuntimeException(e);
@@ -568,7 +565,7 @@ public class ChapterService {
                             AudioCreateTask audioCreateTask = audioCreateTaskQueue.takeFirst();
                             createAudio(audioCreateTask);
                         } catch (Exception e) {
-                            throw new RuntimeException(e);
+                            log.error(e.getMessage(), e);
                         }
                     }
                 }, Executors.newFixedThreadPool(1))
@@ -597,19 +594,17 @@ public class ChapterService {
         audioContext.setOutputDir(outputDir.toAbsolutePath().toString());
         audioContext.setOutputName(fileName);
 
-        String[] model = chapterInfo.getModel().toArray(new String[0]);
-
-        List<AudioServerConfig> audioServerConfigs = configService.getAudioServerConfigs();
-        Map<String, AudioServerConfig> audioServerMap = audioServerConfigs.stream()
-                .collect(Collectors.toMap(AudioServerConfig::getName, Function.identity()));
 
         audioContext.setType(chapterInfo.getModelType());
-        audioContext.setAudioServerConfig(audioServerMap.get(chapterInfo.getModelType()));
 
         if (StringUtils.equals(chapterInfo.getModelType(), "edge-tts")) {
+            String[] model = chapterInfo.getModel().toArray(new String[0]);
             audioContext.setSpeaker(model[0]);
 
-        } else {
+        } else if (StringUtils.equals(chapterInfo.getModelType(), "chat-tts")) {
+            audioContext.setChatTtsConfig(chapterInfo.getChatTtsConfig());
+
+        } else if (List.of("gpt-sovits", "fish-speech").contains(chapterInfo.getModelType())) {
             String[] array = chapterInfo.getAudio().toArray(new String[0]);
 
             Path refAudioPath = pathService.buildRmModelPath("ref-audio", array[0], array[1], array[2], array[3]);
@@ -618,6 +613,7 @@ public class ChapterService {
             audioContext.setRefText(array[3].replace(".wav", ""));
             audioContext.setRefTextLang("zh");
 
+            String[] model = chapterInfo.getModel().toArray(new String[0]);
             audioContext.setModelGroup(model[0]);
             audioContext.setModel(model[1]);
         }
@@ -662,6 +658,10 @@ public class ChapterService {
         j2.put("type", "stage");
         j2.put("project", project);
         j2.put("taskNum", audioCreateTaskQueue.size());
+
+        List<String> creatingIds = new ArrayList<>();
+        audioCreateTaskQueue.forEach(t -> creatingIds.add(t.getChapterInfo().getIndex()));
+        j2.put("creatingIds", creatingIds);
         audioProcessWebSocketHandler.sendMessageToProject(project, JSON.toJSONString(j2));
     }
 }

@@ -58,4 +58,12 @@ public class PathService {
     public Path getRefAudioConfigPath() {
         return buildProjectPath("config", "ref-audio-config.json");
     }
+
+    public Path getRefAudioSortPath() {
+        return buildProjectPath("config", "ref-audio-sort-config.json");
+    }
+
+    public Path getChatTtsConfigPath() {
+        return buildProjectPath("config", "chat-tts-config.json");
+    }
 }

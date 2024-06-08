@@ -5,7 +5,5 @@ import lombok.Data;
 @Data
 public class TextProject {
     private String project;
-    private Integer textNum;
-    private Integer RoleNum;
-    private String stage;
+    private Integer chapterNum;
 }

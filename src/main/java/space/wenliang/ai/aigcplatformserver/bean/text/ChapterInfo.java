@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
-import space.wenliang.ai.aigcplatformserver.bean.model.ModelSelect;
+import space.wenliang.ai.aigcplatformserver.bean.model.ModelConfig;
 
 import java.util.Objects;
 
@@ -65,13 +65,11 @@ public class ChapterInfo extends Role {
         }
     }
 
-    public void setModelSelect(ModelSelect modelSelect) {
-        if (Objects.isNull(modelSelect)) {
+    public void setModelConfig(ModelConfig modelConfig) {
+        if (Objects.isNull(modelConfig)) {
             return;
         }
-        this.setModelType(modelSelect.getModelType());
-        this.setModel(modelSelect.getModel());
-        this.setAudio(modelSelect.getAudio());
+        super.setModelConfig(modelConfig);
 
         this.setAudioStage(modified);
     }

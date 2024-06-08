@@ -117,16 +117,14 @@ public class ChapterUtil {
         Matcher matcher = buildModifiersPatternStr(linesModifiers).matcher(line);
         int lastIndex = 0;
         while (matcher.find()) {
-            int start = matcher.start() - 1;
-            int end = matcher.end() + 1;
-            if (start > lastIndex) {
-                sentenceInfos.add(new ChapterInfo(pIndex, sIndex++, line.substring(lastIndex, start)));
+            if (matcher.start() > lastIndex) {
+                sentenceInfos.add(new ChapterInfo(pIndex, sIndex++, line.substring(lastIndex, matcher.start()).trim()));
             }
-            sentenceInfos.add(new ChapterInfo(pIndex, sIndex++, line.substring(start, end), true));
-            lastIndex = end;
+            sentenceInfos.add(new ChapterInfo(pIndex, sIndex++, line.substring(matcher.start(), matcher.end()).trim(), true));
+            lastIndex = matcher.end();
         }
         if (lastIndex < line.length()) {
-            sentenceInfos.add(new ChapterInfo(pIndex, sIndex, line.substring(lastIndex)));
+            sentenceInfos.add(new ChapterInfo(pIndex, sIndex, line.substring(lastIndex).trim()));
         }
         return sentenceInfos;
     }
@@ -134,15 +132,13 @@ public class ChapterUtil {
     public static Pattern buildModifiersPatternStr(List<String> strings) {
         String patternStr = strings.stream().map(s -> {
                     if (s != null && s.length() == 2) {
-                        String[] split = s.split("");
-                        String var0 = split[0];
-                        String var1 = split[1];
-                        return STR."(?<=\\\{var0})[^\\\{var1}]*(?=\\\{var1})";
+                        String var0 = Pattern.quote(s.substring(0, 1));
+                        String var1 = Pattern.quote(s.substring(1, 2));
+                        return var0 + ".*?" + var1;
                     }
                     return null;
                 }).filter(Objects::nonNull)
                 .collect(Collectors.joining("|"));
-
         return Pattern.compile(patternStr);
     }
 }

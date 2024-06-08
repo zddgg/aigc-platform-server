@@ -2,10 +2,7 @@ package space.wenliang.ai.aigcplatformserver.service;
 
 import com.alibaba.fastjson2.JSON;
 import org.springframework.stereotype.Service;
-import space.wenliang.ai.aigcplatformserver.bean.model.AudioServerConfig;
-import space.wenliang.ai.aigcplatformserver.bean.model.ChatConfig;
-import space.wenliang.ai.aigcplatformserver.bean.model.EdgeTtsConfig;
-import space.wenliang.ai.aigcplatformserver.bean.model.RefAudio;
+import space.wenliang.ai.aigcplatformserver.bean.model.*;
 import space.wenliang.ai.aigcplatformserver.utils.FileUtils;
 
 import java.nio.file.Files;
@@ -58,6 +55,26 @@ public class ConfigService {
 
     public void saveRefAudioConfig(List<RefAudio> config) throws Exception {
         Path path = pathService.getRefAudioConfigPath();
+        Files.write(path, JSON.toJSONBytes(config));
+    }
+
+    public List<RefAudioSort> getRefAudioSort() throws Exception {
+        Path path = pathService.getRefAudioSortPath();
+        return FileUtils.getListFromFile(path, RefAudioSort.class);
+    }
+
+    public void saveRefAudioSort(List<RefAudioSort> refAudioSorts) throws Exception {
+        Path path = pathService.getRefAudioSortPath();
+        Files.write(path, JSON.toJSONBytes(refAudioSorts));
+    }
+
+    public List<ChatTtsConfig> getChatTtsConfig() throws Exception {
+        Path path = pathService.getChatTtsConfigPath();
+        return FileUtils.getListFromFile(path, ChatTtsConfig.class);
+    }
+
+    public void saveChatTtsConfig(List<ChatTtsConfig> config) throws Exception {
+        Path path = pathService.getChatTtsConfigPath();
         Files.write(path, JSON.toJSONBytes(config));
     }
 }

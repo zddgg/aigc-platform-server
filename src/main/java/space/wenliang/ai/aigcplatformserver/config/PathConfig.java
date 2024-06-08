@@ -9,6 +9,12 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 
 import java.io.File;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Data
 @Configuration
@@ -57,14 +63,24 @@ public class PathConfig {
     }
 
     public String buildModelUrl(String[] dirs, String... path) {
-        return modelUrl + String.join("/", dirs) + "/" + String.join("/", path);
+        List<String> var = new ArrayList<>();
+        var.addAll(Arrays.asList(dirs));
+        var.addAll(Arrays.asList(path));
+        return modelUrl + urlEncode(var);
     }
 
     public String buildModelUrl(String... path) {
-        return modelUrl + String.join("/", path);
+        return modelUrl + urlEncode(Arrays.asList(path));
     }
 
     public String buildProjectUrl(String... path) {
-        return projectUrl + String.join("/", path);
+        return projectUrl + urlEncode(Arrays.asList(path));
+    }
+
+    public static String urlEncode(List<String> path) {
+        return path.stream()
+                .map(s -> URLEncoder.encode(s, StandardCharsets.UTF_8))
+                .map(s -> s.replace("+", "%20"))
+                .collect(Collectors.joining("/"));
     }
 }

@@ -20,6 +20,7 @@ public class EdgeTtsConfig {
         private String enName;
         private String zhName;
         private String text;
+        private Boolean show;
 
         public LangText(String enName) {
             this.enName = enName;

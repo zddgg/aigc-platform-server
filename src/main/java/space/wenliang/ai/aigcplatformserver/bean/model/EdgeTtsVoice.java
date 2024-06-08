@@ -22,6 +22,8 @@ public class EdgeTtsVoice {
     private List<VoiceTag> VoiceTag;
 
     private String url;
+    private String text;
+    private String avatar;
 
     @Data
     public static class VoiceTag {

@@ -4,11 +4,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import space.wenliang.ai.aigcplatformserver.bean.model.AudioServerConfig;
+import space.wenliang.ai.aigcplatformserver.bean.model.EdgeTtsConfig;
 import space.wenliang.ai.aigcplatformserver.bean.model.EdgeTtsVoice;
-import space.wenliang.ai.aigcplatformserver.bean.model.RefAudio;
 import space.wenliang.ai.aigcplatformserver.common.Result;
 import space.wenliang.ai.aigcplatformserver.config.PathConfig;
+import space.wenliang.ai.aigcplatformserver.exception.BizException;
 import space.wenliang.ai.aigcplatformserver.model.audio.AudioContext;
 import space.wenliang.ai.aigcplatformserver.model.audio.AudioCreater;
 import space.wenliang.ai.aigcplatformserver.service.ConfigService;
@@ -21,11 +21,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("model/edge-tts")
@@ -35,39 +32,12 @@ public class EdgeTtsController {
     private final PathService pathService;
     private final AudioCreater audioCreater;
     private final ConfigService configService;
-    private final ModelService modelService;
 
     public EdgeTtsController(PathConfig pathConfig, PathService pathService, AudioCreater audioCreater, ConfigService configService, ModelService modelService) {
         this.pathConfig = pathConfig;
         this.pathService = pathService;
         this.audioCreater = audioCreater;
         this.configService = configService;
-        this.modelService = modelService;
-    }
-
-    @PostMapping("queryVoices")
-    public Result<Object> queryVoices() throws Exception {
-
-        List<EdgeTtsVoice> voices = configService.getEdgeTtsConfig().getVoices()
-                .stream()
-                .filter(edgeTtsVoice -> edgeTtsVoice.getShortName().startsWith("zh")
-                        || edgeTtsVoice.getShortName().startsWith("en")
-                        || edgeTtsVoice.getShortName().startsWith("ja")
-                        || edgeTtsVoice.getShortName().startsWith("ko")
-                )
-                .toList();
-
-        Map<String, String> etAudiomap = modelService.getAudios().stream()
-                .filter(refAudio -> StringUtils.equals(refAudio.getGroup(), "edge-tts"))
-                .collect(Collectors.toMap(RefAudio::getName, v -> v.getMoods().getFirst().getMoodAudios().getFirst().getUrl()));
-
-        for (EdgeTtsVoice voice : voices) {
-            if (etAudiomap.containsKey(voice.getShortName())) {
-                voice.setUrl(etAudiomap.get(voice.getShortName()));
-            }
-        }
-
-        return Result.success(voices);
     }
 
     @PostMapping("playAudio")
@@ -75,13 +45,17 @@ public class EdgeTtsController {
 
         Path voiceAudioDir = pathService.buildModelPath("ref-audio", "edge-tts", voice);
 
+        AtomicReference<String> moodName = new AtomicReference<>("");
         AtomicReference<String> audioName = new AtomicReference<>("");
         if (Files.exists(voiceAudioDir)) {
             Files.list(voiceAudioDir).forEach(path -> {
                 if (Files.isDirectory(path)) {
                     try {
                         Optional<Path> first = Files.list(path).findFirst();
-                        first.ifPresent(value -> audioName.set(path.getFileName().toString() + "/" + value.getFileName().toString()));
+                        first.ifPresent(value -> {
+                            moodName.set(path.getFileName().toString());
+                            audioName.set(value.getFileName().toString());
+                        });
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
@@ -89,20 +63,30 @@ public class EdgeTtsController {
             });
         }
         if (StringUtils.isNotBlank(audioName.get())) {
-            String audio = pathConfig.buildModelUrl("ref-audio", "edge-tts", voice, audioName.get());
+            String audio = pathConfig.buildModelUrl("ref-audio", "edge-tts", voice, moodName.get(), audioName.get());
             return Result.success(audio);
         }
 
-        List<AudioServerConfig> audioServerConfigs = configService.getAudioServerConfigs();
-        Map<String, AudioServerConfig> audioServerMap = audioServerConfigs.stream()
-                .collect(Collectors.toMap(AudioServerConfig::getName, Function.identity()));
+        EdgeTtsConfig edgeTtsConfig = configService.getEdgeTtsConfig();
+        List<EdgeTtsVoice> voices = edgeTtsConfig.getVoices();
+        List<EdgeTtsConfig.LangText> langTexts = edgeTtsConfig.getLangTexts();
+        Optional<EdgeTtsVoice> voiceOptional = voices.stream().filter(v -> StringUtils.equals(v.getShortName(), voice)).findFirst();
+        if (voiceOptional.isEmpty()) {
+            throw new BizException("edge-tts speaker [" + voice + "] not found");
+        }
+        Optional<EdgeTtsConfig.LangText> langTextOptional = langTexts.stream()
+                .filter(f -> StringUtils.equals(f.getEnName(),
+                        voiceOptional.get().getLocale().substring(0, voiceOptional.get().getLocale().indexOf("-"))))
+                .findFirst();
+        if (langTextOptional.isEmpty() || StringUtils.isBlank(langTextOptional.get().getText())) {
+            throw new BizException("edge-tts speak text not configured");
+        }
 
         AudioContext audioContext = new AudioContext();
 
         audioContext.setType("edge-tts");
-        audioContext.setAudioServerConfig(audioServerMap.get("edge-tts"));
 
-        String text = "你好呀。今天，也是充满希望的一天！";
+        String text = langTextOptional.get().getText();
         audioContext.setText(text);
         audioContext.setOutputDir(Path.of(voiceAudioDir.toAbsolutePath().toString(), "默认").toAbsolutePath().toString());
         audioContext.setOutputName(text);

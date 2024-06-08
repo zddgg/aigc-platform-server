@@ -5,7 +5,7 @@ import com.alibaba.fastjson2.JSON;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
-import space.wenliang.ai.aigcplatformserver.bean.model.EdgeTtsModelConfig;
+import space.wenliang.ai.aigcplatformserver.bean.model.EdgeTtsConfig;
 import space.wenliang.ai.aigcplatformserver.bean.model.EdgeTtsVoice;
 import space.wenliang.ai.aigcplatformserver.bean.model.GsvModel;
 import space.wenliang.ai.aigcplatformserver.bean.model.RefAudio;
@@ -190,9 +190,9 @@ public class ModelService {
         Map<String, EdgeTtsVoice> edgeTtsVoiceMap = new HashMap<>();
         Path etConfigPath = pathService.getEdgeTtsConfigPath();
         if (Files.exists(etConfigPath)) {
-            EdgeTtsModelConfig edgeTtsModelConfig = JSON.parseObject(Files.readString(etConfigPath), EdgeTtsModelConfig.class);
-            if (edgeTtsModelConfig != null && !CollectionUtils.isEmpty(edgeTtsModelConfig.getVoices())) {
-                edgeTtsVoiceMap = edgeTtsModelConfig.getVoices().stream()
+            EdgeTtsConfig edgeTtsConfig = JSON.parseObject(Files.readString(etConfigPath), EdgeTtsConfig.class);
+            if (edgeTtsConfig != null && !CollectionUtils.isEmpty(edgeTtsConfig.getVoices())) {
+                edgeTtsVoiceMap = edgeTtsConfig.getVoices().stream()
                         .collect(Collectors.toMap(v -> "edge-tts-" + v.getShortName(), Function.identity(), (v1, v2) -> v1));
             }
         }
