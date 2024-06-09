@@ -10,12 +10,11 @@
     </parent>
     <groupId>space.wenliang.ai</groupId>
     <artifactId>aigc-platform-server</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>aigc-platform-server</name>
     <description>aigc-platform-server</description>
     <properties>
         <java.version>21</java.version>
-        <spring-ai.version>0.8.1</spring-ai.version>
     </properties>
     <dependencies>
         <dependency>

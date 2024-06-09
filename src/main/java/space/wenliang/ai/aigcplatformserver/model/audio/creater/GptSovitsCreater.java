@@ -3,9 +3,11 @@ package space.wenliang.ai.aigcplatformserver.model.audio.creater;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestTemplate;
 import space.wenliang.ai.aigcplatformserver.config.PathConfig;
+import space.wenliang.ai.aigcplatformserver.exception.BizException;
 import space.wenliang.ai.aigcplatformserver.model.audio.AudioContext;
 import space.wenliang.ai.aigcplatformserver.service.PathService;
 import space.wenliang.ai.aigcplatformserver.utils.PathWrapper;
@@ -108,9 +110,12 @@ public class GptSovitsCreater extends AbsAudioCreater {
                                 + "/set_sovits_weights?weights_path=" + sovits_weights.get(), String.class
                 );
                 log.info("切换模型成功");
+            } catch (ResourceAccessException e) {
+                log.error("切换GptWeights模型失败", e);
+                throw new BizException("音频生成服务连接异常，服务类型：" + context.getType());
             } catch (Exception e) {
                 log.error("切换GptWeights模型失败", e);
-                throw new RuntimeException(e.getMessage());
+                throw new BizException("create audio failed");
             }
         }
     }

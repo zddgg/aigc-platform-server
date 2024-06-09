@@ -9,7 +9,6 @@ import space.wenliang.ai.aigcplatformserver.exception.BizException;
 import space.wenliang.ai.aigcplatformserver.model.audio.AudioContext;
 import space.wenliang.ai.aigcplatformserver.model.audio.IAudioCreater;
 
-import java.net.ConnectException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
@@ -47,6 +46,9 @@ public abstract class AbsAudioCreater implements IAudioCreater {
             if (response.getStatusCode().is2xxSuccessful() && Objects.nonNull(response.getBody())) {
                 return response;
             }
+        } catch (ResourceAccessException e) {
+            log.error("write exception, context: {}", context, e);
+            throw new BizException("音频生成服务连接异常，服务类型：" + context.getType());
         } catch (Exception e) {
             log.error("write exception, context: {}", context, e);
             throw new BizException("create audio failed");
@@ -79,7 +81,7 @@ public abstract class AbsAudioCreater implements IAudioCreater {
 
             }
 
-        } catch (ConnectException | ResourceAccessException e) {
+        } catch (ResourceAccessException e) {
             log.error("write exception, context: {}", context, e);
             throw new BizException("音频生成服务连接异常，服务类型：" + context.getType());
         } catch (Exception e) {
