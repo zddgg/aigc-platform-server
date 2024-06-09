@@ -1,6 +1,7 @@
 package space.wenliang.ai.aigcplatformserver.controller.text;
 
 import com.alibaba.fastjson2.JSON;
+import io.vavr.Tuple2;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.util.CollectionUtils;
@@ -327,17 +328,17 @@ public class TextChapterController {
     }
 
     @PostMapping(value = "startCreateAudio")
-    public Result<Object> startCreateAudio(@RequestBody AudioCreateParam param) throws IOException {
-        int taskNum = chapterService.startCreateAudio(param);
-        return Result.success(taskNum);
+    public Result<List<String>> startCreateAudio(@RequestBody AudioCreateParam param) throws IOException {
+        Tuple2<Integer, List<String>> tuple2 = chapterService.startCreateAudio(param);
+        return Result.success(tuple2._2).setMsg("提交任务数：" + tuple2._1);
     }
 
     @PostMapping(value = "createAudio")
-    public Result<Object> createAudio(@RequestBody ChapterInfoParam param) throws Exception {
+    public Result<List<String>> createAudio(@RequestBody ChapterInfoParam param) throws Exception {
         Chapter chapter = param.getChapter();
         ChapterInfo chapterInfo = param.getChapterInfo();
-        chapterService.createAudio(chapter.getProject(), chapter.getChapter(), chapterInfo);
-        return Result.success(chapterInfo);
+        List<String> creatingIds = chapterService.createAudio(chapter.getProject(), chapter.getChapter(), chapterInfo);
+        return Result.success(creatingIds).setMsg("提交任务数：1");
     }
 
     @PostMapping(value = "stopCreateAudio")
@@ -419,64 +420,69 @@ public class TextChapterController {
     public Result<Object> chapterExpose(@RequestBody ChapterExpose chapterExpose) throws IOException {
         Chapter chapter = chapterExpose.getChapter();
         List<String> indexes = chapterExpose.getIndexes();
+        Boolean combineAudio = chapterExpose.getCombineAudio();
         Boolean subtitle = chapterExpose.getSubtitle();
 
         if (CollectionUtils.isEmpty(indexes)) {
             return Result.success();
         }
 
-        List<String> dirs = List.of("text", chapter.getProject(), "章节", chapter.getChapter(), "audio");
-        Path outputDir = pathService.buildProjectPath(dirs.toArray(new String[0]));
-
-        Map<String, String> fileNameMap = new HashMap<>();
-        if (Files.exists(outputDir)) {
-            fileNameMap = Files.list(outputDir).map(file -> file.getFileName().toString())
-                    .filter(s -> s.endsWith(".wav"))
-                    .filter(s -> s.split("-").length > 2)
-                    .collect(Collectors.toMap((String fileName) -> fileName.split("-")[0] + "-" + fileName.split("-")[1],
-                            Function.identity(), (oldValue, newValue) -> newValue));
-        }
-
-
-        List<ChapterInfo> handleList = new ArrayList<>();
         List<ChapterInfo> chapterInfos = chapterService.getChapterInfos(chapter.getProject(), chapter.getChapter());
-        for (ChapterInfo item : chapterInfos) {
-            String key = item.getP() + "-" + item.getS();
-            if (indexes.contains(key) && StringUtils.isNotBlank(item.getModelType())) {
-                item.setExport(true);
-                if (fileNameMap.containsKey(key)) {
-                    List<String> itemDirs = new ArrayList<>(dirs);
-                    itemDirs.add(fileNameMap.get(key));
-                    item.setAudioPath(pathService.buildProjectPath(itemDirs.toArray(new String[0])).toAbsolutePath().toString());
-                    handleList.add(item);
+
+        if (Objects.equals(combineAudio, Boolean.TRUE)) {
+            List<String> dirs = List.of("text", chapter.getProject(), "章节", chapter.getChapter(), "audio");
+            Path outputDir = pathService.buildProjectPath(dirs.toArray(new String[0]));
+
+            Map<String, String> fileNameMap = new HashMap<>();
+            if (Files.exists(outputDir)) {
+                fileNameMap = Files.list(outputDir).map(file -> file.getFileName().toString())
+                        .filter(s -> s.endsWith(".wav"))
+                        .filter(s -> s.split("-").length > 2)
+                        .collect(Collectors.toMap((String fileName) -> fileName.split("-")[0] + "-" + fileName.split("-")[1],
+                                Function.identity(), (oldValue, newValue) -> newValue));
+            }
+
+
+            List<ChapterInfo> handleList = new ArrayList<>();
+            for (ChapterInfo item : chapterInfos) {
+                String key = item.getP() + "-" + item.getS();
+                if (indexes.contains(key) && StringUtils.isNotBlank(item.getModelType())) {
+                    item.setExport(true);
+                    if (fileNameMap.containsKey(key)) {
+                        List<String> itemDirs = new ArrayList<>(dirs);
+                        itemDirs.add(fileNameMap.get(key));
+                        item.setAudioPath(pathService.buildProjectPath(itemDirs.toArray(new String[0])).toAbsolutePath().toString());
+                        handleList.add(item);
+                    }
+                } else {
+                    item.setExport(false);
                 }
-            } else {
-                item.setExport(false);
             }
-        }
 
-        Path outputWavPath = pathService.buildProjectPath("text", chapter.getProject(), "章节", chapter.getChapter(), "output.wav");
-        AudioUtils.mergeAudioFiles(handleList, outputWavPath.toAbsolutePath().toString());
+            Path outputWavPath = pathService.buildProjectPath("text", chapter.getProject(), "章节", chapter.getChapter(), "output.wav");
+            AudioUtils.mergeAudioFiles(handleList, outputWavPath.toAbsolutePath().toString());
 
-        Map<String, ChapterInfo> collect = handleList.stream()
-                .collect(Collectors.toMap(v -> v.getP() + "-" + v.getS(), Function.identity()));
+            Map<String, ChapterInfo> collect = handleList.stream()
+                    .collect(Collectors.toMap(v -> v.getP() + "-" + v.getS(), Function.identity()));
 
-        for (ChapterInfo chapterInfo : chapterInfos) {
-            String key = chapterInfo.getP() + "-" + chapterInfo.getS();
-            if (collect.containsKey(key)) {
-                chapterInfo.setLengthInMs(collect.get(key).getLengthInMs());
+            for (ChapterInfo chapterInfo : chapterInfos) {
+                String key = chapterInfo.getP() + "-" + chapterInfo.getS();
+                if (collect.containsKey(key)) {
+                    chapterInfo.setLengthInMs(collect.get(key).getLengthInMs());
+                }
             }
+
+            chapterService.saveChapterInfos(chapter.getProject(), chapter.getChapter(), chapterInfos);
+
+            Path archiveWavPath = pathService.buildProjectPath("text", chapter.getProject(), "output", chapter.getChapter() + ".wav");
+            if (Files.notExists(archiveWavPath.getParent())) {
+                Files.createDirectories(archiveWavPath.getParent());
+            }
+            Files.copy(outputWavPath, archiveWavPath);
         }
 
-        chapterService.saveChapterInfos(chapter.getProject(), chapter.getChapter(), chapterInfos);
-
-        Path archiveWavPath = pathService.buildProjectPath("text", chapter.getProject(), "output", chapter.getChapter() + ".wav");
-        if (Files.notExists(archiveWavPath.getParent())) {
-            Files.createDirectories(archiveWavPath.getParent());
-        }
-        Files.copy(outputWavPath, archiveWavPath);
-
-        if (subtitle) {
+        if (Objects.equals(subtitle, Boolean.TRUE)) {
+            List<ChapterInfo> handleList = chapterInfos.stream().filter(c -> Objects.equals(Boolean.TRUE, c.getExport())).toList();
             Path outputSrtPath = pathService.buildProjectPath("text", chapter.getProject(), "章节", chapter.getChapter(), "output.srt");
             SubtitleUtil.srtFile(handleList, outputSrtPath);
 

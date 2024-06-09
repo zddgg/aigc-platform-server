@@ -16,7 +16,7 @@ public class PathService {
 
 
     public Path buildModelPath(String... names) {
-        return Path.of(pathConfig.getScModelDir(), names);
+        return Path.of(pathConfig.getModelDir(), names);
     }
 
     public Path buildRmModelPath(String... names) {
@@ -24,7 +24,7 @@ public class PathService {
     }
 
     public Path buildProjectPath(String... names) {
-        return Path.of(pathConfig.getScProjectDir(), names);
+        return Path.of(pathConfig.getProjectDir(), names);
     }
 
     public Path getCommonRolesPath(String project) {

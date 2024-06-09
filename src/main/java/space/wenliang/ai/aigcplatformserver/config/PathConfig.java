@@ -30,8 +30,8 @@ public class PathConfig {
     @Autowired
     private Environment env;
 
-    private String scModelDir;
-    private String scProjectDir;
+    private String modelDir;
+    private String projectDir;
 
     private String modelUrl;
     private String projectUrl;
@@ -39,22 +39,26 @@ public class PathConfig {
     @PostConstruct
     public void init() {
         String userDir = env.getProperty("user.dir");
-        modelUrl = STR."http://localhost:\{env.getProperty("server.port")}/model/";
-        projectUrl = STR."http://localhost:\{env.getProperty("server.port")}/project/";
 
-        scModelDir = env.getProperty("sc_model_dir");
-        scProjectDir = env.getProperty("sc_project_dir");
+        String host = "127.0.0.1";
+        String port = env.getProperty("server.port");
 
-        if (StringUtils.isBlank(scModelDir)) {
-            scModelDir = userDir + File.separator + "model";
+        modelUrl = STR."http://\{host}:\{port}/files/model/";
+        projectUrl = STR."http://\{host}:\{port}/files/project/";
+
+        modelDir = env.getProperty("sc_model_dir");
+        projectDir = env.getProperty("sc_project_dir");
+
+        if (StringUtils.isBlank(modelDir)) {
+            modelDir = userDir + File.separator + "model";
         }
 
         if (!remoteEnable) {
             remoteModelDir = userDir + File.separator + "model";
         }
 
-        if (StringUtils.isBlank(scProjectDir)) {
-            scProjectDir = userDir + File.separator + "project";
+        if (StringUtils.isBlank(projectDir)) {
+            projectDir = userDir + File.separator + "project";
         }
     }
 

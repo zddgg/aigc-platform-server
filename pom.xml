@@ -149,4 +149,22 @@
         </plugins>
     </build>
 
+    <profiles>
+        <profile>
+            <id>split</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <deployment>split</deployment>
+            </properties>
+        </profile>
+        <profile>
+            <id>integrated</id>
+            <properties>
+                <deployment>integrated</deployment>
+            </properties>
+        </profile>
+    </profiles>
+
 </project>

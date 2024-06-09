@@ -12,7 +12,7 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.socket.client.ReactorNettyWebSocketClient;
 import org.springframework.web.reactive.socket.client.WebSocketClient;
-import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import space.wenliang.ai.aigcplatformserver.spring.resolver.SingleValueParamHandlerMethodArgumentResolver;
 
@@ -21,18 +21,10 @@ import java.util.List;
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
 
-    private final PathConfig pathConfig;
-
-    public WebMvcConfig(PathConfig pathConfig) {
-        this.pathConfig = pathConfig;
-    }
-
     @Override
-    public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        registry.addResourceHandler("/model/**")
-                .addResourceLocations("file:" + pathConfig.getScModelDir() + "/");
-        registry.addResourceHandler("/project/**")
-                .addResourceLocations("file:" + pathConfig.getScProjectDir() + "/");
+    public void addViewControllers(ViewControllerRegistry registry) {
+        registry.addViewController("/webui/**")
+                .setViewName("forward:/index.html");
     }
 
     @Override

@@ -2,6 +2,8 @@ package space.wenliang.ai.aigcplatformserver.service;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import jakarta.annotation.PostConstruct;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -528,7 +530,7 @@ public class ChapterService {
 
     public static final LinkedBlockingDeque<AudioCreateTask> audioCreateTaskQueue = new LinkedBlockingDeque<>();
 
-    public int startCreateAudio(AudioCreateParam param) {
+    public Tuple2<Integer, List<String>> startCreateAudio(AudioCreateParam param) {
         try {
             List<ChapterInfo> chapterInfos = this.getChapterInfos(param.getProject(), param.getChapter())
                     .stream().filter(c -> StringUtils.isNotBlank(c.getModelType())).toList();
@@ -547,15 +549,22 @@ public class ChapterService {
             }
 
             log.info("批量生成任务提交成功");
-            return chapterInfos.size();
+
+            List<String> creatingIds = new ArrayList<>();
+            chapterInfos.forEach(t -> creatingIds.add(t.getIndex()));
+
+            return Tuple.of(chapterInfos.size(), creatingIds);
         } catch (Exception e) {
             log.error(e.getMessage());
             throw new RuntimeException(e);
         }
     }
 
-    public void createAudio(String project, String chapter, ChapterInfo chapterInfo) throws Exception {
+    public List<String> createAudio(String project, String chapter, ChapterInfo chapterInfo) throws Exception {
         audioCreateTaskQueue.add(new AudioCreateTask(project, chapter, chapterInfo));
+        List<String> creatingIds = new ArrayList<>();
+        audioCreateTaskQueue.forEach(t -> creatingIds.add(t.getChapterInfo().getIndex()));
+        return creatingIds;
     }
 
     public void audioCreateTask() {
