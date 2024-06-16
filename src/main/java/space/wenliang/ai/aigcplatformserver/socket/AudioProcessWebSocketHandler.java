@@ -24,10 +24,10 @@ public class AudioProcessWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
         Map<String, String> params = getQueryParams(Objects.requireNonNull(session.getUri()).getQuery());
-        String project = params.get("project");
-        if (StringUtils.isNotBlank(project)) {
-            sessions.put(project, session);
-            log.info("Connection established with session id: {} for project: {}", session.getId(), project);
+        String projectId = params.get("projectId");
+        if (StringUtils.isNotBlank(projectId)) {
+            sessions.put(projectId, session);
+            log.info("Connection established with session id: {} for project: {}", session.getId(), projectId);
         }
     }
 

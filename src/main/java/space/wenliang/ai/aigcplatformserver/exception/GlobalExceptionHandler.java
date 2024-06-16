@@ -35,7 +35,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(value = Exception.class)
     @ResponseBody
     public Result<Object> exceptionHandler(Exception e) {
-        log.error("bizExceptionHandler, message: {}", e.getMessage(), e);
+        log.error("exceptionHandler, message: {}", e.getMessage(), e);
         return Result.failure(e.getMessage());
     }
 }

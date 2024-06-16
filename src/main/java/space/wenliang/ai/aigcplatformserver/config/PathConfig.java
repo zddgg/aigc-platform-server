@@ -3,7 +3,6 @@ package space.wenliang.ai.aigcplatformserver.config;
 import jakarta.annotation.PostConstruct;
 import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
@@ -11,7 +10,7 @@ import org.springframework.core.env.Environment;
 import java.io.File;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -27,14 +26,17 @@ public class PathConfig {
     @Value("${remote.model-dir}")
     private String remoteModelDir;
 
-    @Autowired
-    private Environment env;
+    private final Environment env;
 
     private String modelDir;
     private String projectDir;
 
     private String modelUrl;
     private String projectUrl;
+
+    public PathConfig(Environment env) {
+        this.env = env;
+    }
 
     @PostConstruct
     public void init() {
@@ -66,11 +68,16 @@ public class PathConfig {
         return remoteEnable ? remotePlatform : "";
     }
 
-    public String buildModelUrl(String[] dirs, String... path) {
-        List<String> var = new ArrayList<>();
-        var.addAll(Arrays.asList(dirs));
-        var.addAll(Arrays.asList(path));
-        return modelUrl + urlEncode(var);
+    public Path buildModelPath(String... path) {
+        return Path.of(modelDir, path);
+    }
+
+    public Path buildRmModelPath(String... names) {
+        return Path.of(remoteModelDir, names);
+    }
+
+    public Path buildProjectPath(String... names) {
+        return Path.of(projectDir, names);
     }
 
     public String buildModelUrl(String... path) {

@@ -4,8 +4,6 @@ server:
 spring:
   application:
     name: aigc-platform-server
-  profiles:
-    active: @deployment@
   servlet:
     multipart:
       max-file-size: 100MB
@@ -13,6 +11,17 @@ spring:
   mvc:
     async:
       request-timeout: 600000
+
+  datasource:
+    url: jdbc:mysql:///aigc_platform?rewriteBatchedStatements=true&useServerPrepStmts=true&useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+mybatis-plus:
+  mapper-locations: classpath:mapper/*.xml
+#  configuration:
+#    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
 remote:
   enable: false

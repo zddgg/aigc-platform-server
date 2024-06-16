@@ -14,6 +14,8 @@ import java.util.Objects;
 
 public class SingleValueParamHandlerMethodArgumentResolver implements HandlerMethodArgumentResolver {
 
+    private static final String REQUEST_BODY_ATTRIBUTE = "REQUEST_BODY_ATTRIBUTE";
+
     @Override
     public boolean supportsParameter(MethodParameter parameter) {
         return parameter.hasParameterAnnotation(SingleValueParam.class);
@@ -27,16 +29,21 @@ public class SingleValueParamHandlerMethodArgumentResolver implements HandlerMet
         if (Objects.isNull(request) || Objects.isNull(singleValueParam)) {
             return null;
         }
-        BufferedReader reader = request.getReader();
-        StringBuilder sb = new StringBuilder();
-        char[] buf = new char[1024];
-        int rd;
-        while ((rd = reader.read(buf)) != -1) {
-            sb.append(buf, 0, rd);
+
+        JSONObject jsonObject = (JSONObject) request.getAttribute(REQUEST_BODY_ATTRIBUTE);
+        if (jsonObject == null) {
+            BufferedReader reader = request.getReader();
+            StringBuilder sb = new StringBuilder();
+            char[] buf = new char[1024];
+            int rd;
+            while ((rd = reader.read(buf)) != -1) {
+                sb.append(buf, 0, rd);
+            }
+            jsonObject = JSONObject.parseObject(sb.toString());
+            request.setAttribute(REQUEST_BODY_ATTRIBUTE, jsonObject);
         }
-        JSONObject jsonObject = JSONObject.parseObject(sb.toString());
+
         String value = singleValueParam.value();
         return jsonObject.get(value);
     }
-
 }
