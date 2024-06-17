@@ -4,8 +4,6 @@ server:
 spring:
   application:
     name: aigc-platform-server
-  profiles:
-    active: @deployment@
   servlet:
     multipart:
       max-file-size: 100MB
