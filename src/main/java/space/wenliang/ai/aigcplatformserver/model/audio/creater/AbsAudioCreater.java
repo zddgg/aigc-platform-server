@@ -8,6 +8,7 @@ import org.springframework.web.client.RestClient;
 import space.wenliang.ai.aigcplatformserver.exception.BizException;
 import space.wenliang.ai.aigcplatformserver.model.audio.AudioContext;
 import space.wenliang.ai.aigcplatformserver.model.audio.IAudioCreater;
+import space.wenliang.ai.aigcplatformserver.utils.AudioUtils;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -75,7 +76,7 @@ public abstract class AbsAudioCreater implements IAudioCreater {
                 if (Files.notExists(path.getParent())) {
                     Files.createDirectories(path.getParent());
                 }
-                Files.write(path, response.getBody());
+                AudioUtils.wavFormat(response.getBody(), path.toAbsolutePath().toString());
                 post(context);
                 log.info("write file, context: {}", context);
 

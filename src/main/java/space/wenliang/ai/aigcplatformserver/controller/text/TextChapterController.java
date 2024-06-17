@@ -179,7 +179,7 @@ public class TextChapterController {
                 if (StringUtils.isNotBlank(vo.getLinesPattern())) {
                     linesModifiers.add(vo.getLinesPattern());
                 }
-                List<ChapterInfo> chapterInfos = ChapterUtil.parseChapterInfo(vo.getTextContent(),linesModifiers);
+                List<ChapterInfo> chapterInfos = ChapterUtil.parseChapterInfo(vo.getTextContent(), linesModifiers);
 
                 Role asideRole = new Role("旁白");
                 chapterInfos = chapterInfos.stream().peek(chapterInfo -> chapterInfo.setRoleInfo(asideRole)).toList();
@@ -417,7 +417,7 @@ public class TextChapterController {
     }
 
     @PostMapping(value = "chapterExpose")
-    public Result<Object> chapterExpose(@RequestBody ChapterExpose chapterExpose) throws IOException {
+    public Result<Object> chapterExpose(@RequestBody ChapterExpose chapterExpose) throws Exception {
         Chapter chapter = chapterExpose.getChapter();
         List<String> indexes = chapterExpose.getIndexes();
         Boolean combineAudio = chapterExpose.getCombineAudio();
@@ -478,6 +478,9 @@ public class TextChapterController {
             if (Files.notExists(archiveWavPath.getParent())) {
                 Files.createDirectories(archiveWavPath.getParent());
             }
+            if (Files.exists(archiveWavPath)) {
+                Files.delete(archiveWavPath);
+            }
             Files.copy(outputWavPath, archiveWavPath);
         }
 
@@ -487,6 +490,12 @@ public class TextChapterController {
             SubtitleUtil.srtFile(handleList, outputSrtPath);
 
             Path archiveSrtPath = pathService.buildProjectPath("text", chapter.getProject(), "output", chapter.getChapter() + ".srt");
+            if (Files.notExists(archiveSrtPath.getParent())) {
+                Files.createDirectories(archiveSrtPath.getParent());
+            }
+            if (Files.exists(archiveSrtPath)) {
+                Files.delete(archiveSrtPath);
+            }
             Files.copy(outputSrtPath, archiveSrtPath);
         }
 

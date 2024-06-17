@@ -15,8 +15,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static java.util.stream.IntStream.range;
-
 public class ChapterUtil {
 
     public static List<ChapterParse> chapterSplit(String filePath, String chapterTitlePattern) throws IOException {
@@ -95,14 +93,17 @@ public class ChapterUtil {
     public static List<ChapterInfo> parseChapterInfo(String chapter, List<String> linesModifiers) {
         List<ChapterInfo> lineInfos = new ArrayList<>();
         String[] split = chapter.split("\n");
-        range(0, split.length).forEach(pIndex -> {
-            String line = split[pIndex];
+
+        int pIndex = 0;
+        for (String line : split) {
             String trimmedLine = line.stripLeading();
-            if (!trimmedLine.isEmpty()) {
+
+            if (StringUtils.isNotBlank(trimmedLine)) {
                 List<ChapterInfo> sentenceInfos = parseLineInfo(pIndex, trimmedLine, linesModifiers);
                 lineInfos.addAll(sentenceInfos);
+                pIndex++;
             }
-        });
+        }
         return lineInfos;
     }
 

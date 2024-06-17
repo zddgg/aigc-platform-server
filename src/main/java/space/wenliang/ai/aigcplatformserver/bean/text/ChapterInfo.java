@@ -37,6 +37,8 @@ public class ChapterInfo extends Role {
     private String audioPath;
     private Long lengthInMs;
 
+    private byte[] audioBytes;
+
     public ChapterInfo(Integer p, Integer s, String text) {
         this.p = p;
         this.s = s;

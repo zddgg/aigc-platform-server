@@ -1,29 +1,38 @@
 package space.wenliang.ai.aigcplatformserver.utils;
 
 import org.bytedeco.ffmpeg.global.avcodec;
-import org.bytedeco.javacv.FFmpegFrameFilter;
-import org.bytedeco.javacv.FFmpegFrameGrabber;
-import org.bytedeco.javacv.FFmpegFrameRecorder;
-import org.bytedeco.javacv.Frame;
-import org.springframework.util.CollectionUtils;
+import org.bytedeco.javacv.*;
 import space.wenliang.ai.aigcplatformserver.bean.text.ChapterInfo;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.nio.Buffer;
 import java.nio.ShortBuffer;
 import java.util.List;
 
+import static org.bytedeco.ffmpeg.global.avutil.AV_LOG_ERROR;
+
 public class AudioUtils {
 
-    public static void mp3ToWav(String input, String output) throws Exception {
-        // 创建FFmpegFrameGrabber以读取MP3文件
-        try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(input)) {
+
+    static {
+        FFmpegLogCallback.set();
+        FFmpegLogCallback.setLevel(AV_LOG_ERROR);
+    }
+
+    public static void wavFormat(byte[] bytes, String output) throws Exception {
+        InputStream inputStream = new ByteArrayInputStream(bytes);
+
+        try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(inputStream)) {
             grabber.start();
 
-            // 创建FFmpegFrameRecorder以写入WAV文件
             try (FFmpegFrameRecorder recorder = new FFmpegFrameRecorder(output, grabber.getAudioChannels())) {
                 recorder.setAudioCodec(avcodec.AV_CODEC_ID_PCM_S16LE);
-                recorder.setSampleRate(32000);  // 设置采样率
-                recorder.setAudioChannels(1);   // 设置音频通道数
+                recorder.setSampleRate(32000);
+                recorder.setAudioChannels(1);
+                recorder.setAudioBitrate(512000);
+                recorder.setFormat("wav");
                 recorder.start();
 
                 Frame frame;
@@ -38,16 +47,16 @@ public class AudioUtils {
         }
     }
 
-    public static void mergeAudioFiles(List<ChapterInfo> chapterInfos, String outputFile) {
-        if (CollectionUtils.isEmpty(chapterInfos)) {
+    public static void mergeAudioFiles(List<ChapterInfo> chapterInfos, String outputFile) throws Exception {
+        if (chapterInfos == null || chapterInfos.isEmpty()) {
             throw new IllegalArgumentException("Audio segments list cannot be null or empty");
         }
 
-        FFmpegFrameGrabber initialGrabber = null;
-        FFmpegFrameRecorder recorder = null;
+        for (ChapterInfo chapterInfo : chapterInfos) {
+            filterProcess(chapterInfo);
+        }
 
-        try {
-            initialGrabber = new FFmpegFrameGrabber(chapterInfos.getFirst().getAudioPath());
+        try (FFmpegFrameGrabber initialGrabber = new FFmpegFrameGrabber(new ByteArrayInputStream(chapterInfos.getFirst().getAudioBytes()))) {
             initialGrabber.start();
 
             int sampleRate = initialGrabber.getSampleRate();
@@ -56,61 +65,77 @@ public class AudioUtils {
             int audioCodec = initialGrabber.getAudioCodec();
             initialGrabber.stop();
 
-            recorder = new FFmpegFrameRecorder(outputFile, audioChannels);
-            recorder.setAudioCodec(audioCodec);
-            recorder.setSampleRate(sampleRate);
-            recorder.setAudioBitrate(audioBitrate);
-            recorder.start();
+            try (FFmpegFrameRecorder recorder = new FFmpegFrameRecorder(outputFile, audioChannels)) {
+                recorder.setAudioCodec(audioCodec);
+                recorder.setSampleRate(sampleRate);
+                recorder.setAudioBitrate(audioBitrate);
+                recorder.start();
 
-            for (int i = 0; i < chapterInfos.size(); i++) {
-                ChapterInfo chapterInfo = chapterInfos.get(i);
-                try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(chapterInfo.getAudioPath())) {
-                    grabber.start();
+                for (int i = 0; i < chapterInfos.size(); i++) {
+                    ChapterInfo chapterInfo = chapterInfos.get(i);
+                    try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(new ByteArrayInputStream(chapterInfo.getAudioBytes()))) {
+                        grabber.start();
 
-                    // 保存音频时长
-                    chapterInfo.setLengthInMs((long) (grabber.getLengthInTime() / (1000 * chapterInfo.getSpeed())));
+                        chapterInfo.setLengthInMs(grabber.getLengthInTime() / 1000);
 
-                    recordAudio(grabber, recorder, chapterInfo.getSpeed(), chapterInfo.getVolume() / 100.0); // 固定值 1.0
+                        recordAudio(grabber, recorder);
 
-                    if (i < chapterInfos.size() - 1) {
-                        recordSilence(recorder, sampleRate, audioChannels, chapterInfo.getInterval());
+                        if (i < chapterInfos.size() - 1) {
+                            recordSilence(recorder, sampleRate, audioChannels, chapterInfo.getInterval());
+                        }
                     }
                 }
-            }
-            System.out.println("Audio files merged successfully.");
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                if (initialGrabber != null) {
-                    initialGrabber.release();
-                }
-                if (recorder != null) {
-                    recorder.stop();
-                    recorder.release();
-                }
-            } catch (FFmpegFrameGrabber.Exception | FFmpegFrameRecorder.Exception e) {
-                e.printStackTrace();
+
+                recorder.stop();
             }
         }
     }
 
-    private static void recordAudio(FFmpegFrameGrabber grabber, FFmpegFrameRecorder recorder, double speed, double volume) throws Exception {
-        String filterString = String.format("atempo=%.1f,volume=%.1f", speed, volume);
+    private static void filterProcess(ChapterInfo chapterInfo) throws Exception {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
-        try (FFmpegFrameFilter filter = new FFmpegFrameFilter(filterString, grabber.getAudioChannels())) {
-            filter.setSampleRate(grabber.getSampleRate());
-            filter.start();
-            Frame frame;
+        try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(chapterInfo.getAudioPath())) {
+            grabber.start();
 
-            while ((frame = grabber.grabFrame()) != null) {
-                filter.push(frame);
-                Frame filteredFrame;
-                while ((filteredFrame = filter.pull()) != null) {
-                    recorder.record(filteredFrame);
+            try (FFmpegFrameRecorder recorder = new FFmpegFrameRecorder(outputStream, grabber.getAudioChannels())) {
+                recorder.setAudioCodec(grabber.getAudioCodec());
+                recorder.setSampleRate(grabber.getSampleRate());
+                recorder.setAudioChannels(grabber.getAudioChannels());
+                recorder.setAudioBitrate(grabber.getAudioBitrate());
+                recorder.setFormat("wav");
+                recorder.start();
+
+                String filterString = String.format("atempo=%.1f,volume=%.1f", chapterInfo.getSpeed(), chapterInfo.getVolume() / 100.0);
+
+                try (FFmpegFrameFilter filter = new FFmpegFrameFilter(filterString, grabber.getAudioChannels())) {
+                    filter.setSampleRate(grabber.getSampleRate());
+                    filter.start();
+                    Frame frame;
+
+                    while ((frame = grabber.grabFrame()) != null) {
+                        filter.push(frame);
+                        Frame filteredFrame;
+                        while ((filteredFrame = filter.pull()) != null) {
+                            recorder.record(filteredFrame);
+                        }
+                    }
+
+                    filter.stop();
                 }
 
+                recorder.stop();
             }
+
+            grabber.stop();
+
+            chapterInfo.setAudioBytes(outputStream.toByteArray());
+        }
+    }
+
+    private static void recordAudio(FFmpegFrameGrabber grabber, FFmpegFrameRecorder recorder) throws Exception {
+        Frame frame;
+        while ((frame = grabber.grabFrame()) != null) {
+            recorder.record(frame);
         }
     }
 
