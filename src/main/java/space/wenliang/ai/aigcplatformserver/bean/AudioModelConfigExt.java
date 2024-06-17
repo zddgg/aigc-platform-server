@@ -1,6 +1,7 @@
 package space.wenliang.ai.aigcplatformserver.bean;
 
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 import space.wenliang.ai.aigcplatformserver.entity.*;
@@ -34,6 +35,7 @@ public class AudioModelConfigExt {
     @TableField(exist = false)
     private String audioPath;
 
+    @JsonIgnore
     @TableField(exist = false)
     private byte[] audioBytes;
 }

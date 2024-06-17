@@ -85,6 +85,7 @@ public class AudioUtils {
                             recordSilence(recorder, sampleRate, audioChannels, chapterInfo.getNextAudioInterval());
                         }
                     }
+                    chapterInfo.setAudioBytes(null);
                 }
 
                 recorder.stop();
