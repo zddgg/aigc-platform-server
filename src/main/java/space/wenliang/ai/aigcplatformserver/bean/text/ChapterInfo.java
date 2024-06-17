@@ -1,5 +1,6 @@
 package space.wenliang.ai.aigcplatformserver.bean.text;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -37,6 +38,7 @@ public class ChapterInfo extends Role {
     private String audioPath;
     private Long lengthInMs;
 
+    @JsonIgnore
     private byte[] audioBytes;
 
     public ChapterInfo(Integer p, Integer s, String text) {
