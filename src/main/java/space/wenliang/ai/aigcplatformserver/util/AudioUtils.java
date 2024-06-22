@@ -11,6 +11,7 @@ import java.io.InputStream;
 import java.nio.Buffer;
 import java.nio.ShortBuffer;
 import java.util.List;
+import java.util.Objects;
 
 import static org.bytedeco.ffmpeg.global.avutil.AV_LOG_ERROR;
 
@@ -81,7 +82,9 @@ public class AudioUtils {
 
                         recordAudio(grabber, recorder);
 
-                        if (i < chapterInfos.size() - 1) {
+                        if (i < chapterInfos.size() - 1
+                                && Objects.nonNull(chapterInfo.getNextAudioInterval())
+                                && chapterInfo.getNextAudioInterval() > 0) {
                             recordSilence(recorder, sampleRate, audioChannels, chapterInfo.getNextAudioInterval());
                         }
                     }
