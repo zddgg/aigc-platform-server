@@ -56,7 +56,7 @@ pipeline {
             steps {
                 script {
                     sh """
-                    docker run -d --name ${CONTAINER_NAME} -p 39291:8080 -e JASYPT_ENCRYPTOR_PASSWORD=${JASYPT_ENCRYPTOR_PASSWORD} ${IMAGE_NAME}:${IMAGE_TAG}
+                    docker run -d --name ${CONTAINER_NAME} --network app -p 39291:8080 -e JASYPT_ENCRYPTOR_PASSWORD=${JASYPT_ENCRYPTOR_PASSWORD} ${IMAGE_NAME}:${IMAGE_TAG}
                     """
                 }
             }
