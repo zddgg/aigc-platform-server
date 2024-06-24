@@ -13,6 +13,13 @@ pipeline {
     }
 
     stages {
+        stage('Set Environment Variable from Host') {
+            steps {
+                script {
+                    sh 'source /load_env.sh'
+                }
+            }
+        }
 
         stage('Build with Maven') {
             steps {
