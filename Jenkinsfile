@@ -74,10 +74,10 @@ pipeline {
         stage('Run New Container') {
             steps {
                 script {
-                    sh 'bash -c "source /load_env.sh"'
                     sh """
                     docker run -d --name ${CONTAINER_NAME} \
-                    --network app -p 39291:8080 \
+                    --network app \
+                    -p 39291:8080 \
                     -e DB_USERNAME=${env.DB_USERNAME} \
                     -e DB_PASSWORD=${env.DB_PASSWORD} \
                     ${IMAGE_NAME}:${IMAGE_TAG}
