@@ -67,8 +67,6 @@ pipeline {
         stage('Run New Container') {
             steps {
                 script {
-                    echo "DB_USERNAME: ${env.DB_USERNAME}"
-                    echo "DB_PASSWORD: ${env.DB_PASSWORD}"
                     sh """
                     docker run -d --name ${CONTAINER_NAME} \
                     --network app \
