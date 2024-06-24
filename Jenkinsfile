@@ -16,7 +16,7 @@ pipeline {
         stage('Set Environment Variable from Host') {
             steps {
                 script {
-                    sh 'source /load_env.sh'
+                    sh 'bash -c "source /load_env.sh"'
                 }
             }
         }
