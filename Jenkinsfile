@@ -25,16 +25,14 @@ pipeline {
                         line.trim()
                     }.findAll { line ->
                         line && !line.startsWith('#')
-                    }.collect { line ->
+                    }.collectEntries { line ->
                         def pair = line.split('=')
-                        return "${pair[0]}=${pair[1]}"
+                        [(pair[0]): pair[1]]
                     }
 
-                    // Use withEnv to set environment variables
-                    withEnv(envVars) {
-                        // Environment variables are now available within this block
-                        // Optionally print them for debugging purposes
-                        sh 'printenv' // 可选：用于调试，检查环境变量是否正确加载
+                    // Set environment variables in the Pipeline env
+                    envVars.each { key, value ->
+                        env[key] = value
                     }
                 }
             }
