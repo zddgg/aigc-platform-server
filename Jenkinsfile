@@ -13,13 +13,6 @@ pipeline {
     }
 
     stages {
-        stage('Set Environment Variable from Host') {
-            steps {
-                script {
-                    env.JASYPT_ENCRYPTOR_PASSWORD = sh(script: 'echo $JASYPT_ENCRYPTOR_PASSWORD', returnStdout: true).trim()
-                }
-            }
-        }
 
         stage('Build with Maven') {
             steps {
@@ -56,7 +49,11 @@ pipeline {
             steps {
                 script {
                     sh """
-                    docker run -d --name ${CONTAINER_NAME} --network app -p 39291:8080 -e JASYPT_ENCRYPTOR_PASSWORD=${JASYPT_ENCRYPTOR_PASSWORD} ${IMAGE_NAME}:${IMAGE_TAG}
+                    docker run -d --name ${CONTAINER_NAME} \
+                    --network app -p 39291:8080 \
+                    -e DB_USERNAME=${DB_USERNAME} \
+                    -e DB_PASSWORD=${DB_PASSWORD} \
+                    ${IMAGE_NAME}:${IMAGE_TAG}
                     """
                 }
             }
