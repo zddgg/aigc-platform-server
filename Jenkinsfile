@@ -18,17 +18,23 @@ pipeline {
             steps {
                 script {
                     // Read env.config file content
-                    def envConfigContent = readFile('/env.config')
+                    def envConfigContent = readFile('/env.config') // 请确保路径正确
 
                     // Split content by line and parse key-value pairs
-                    def envVars = envConfigContent.split("\n").collectEntries { line ->
+                    def envVars = envConfigContent.split("\n").collect { line ->
+                        line.trim()
+                    }.findAll { line ->
+                        line && !line.startsWith('#')
+                    }.collect { line ->
                         def pair = line.split('=')
-                        [(pair[0]): pair[1]]
+                        return "${pair[0]}=${pair[1]}"
                     }
 
-                    // Set environment variables in the Pipeline env
-                    envVars.each { key, value ->
-                        env[key] = value
+                    // Use withEnv to set environment variables
+                    withEnv(envVars) {
+                        // Environment variables are now available within this block
+                        // Optionally print them for debugging purposes
+                        sh 'printenv' // 可选：用于调试，检查环境变量是否正确加载
                     }
                 }
             }
