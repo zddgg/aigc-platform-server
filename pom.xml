@@ -13,14 +13,29 @@
     <version>1.0.0</version>
     <name>aigc-platform-server</name>
     <description>aigc-platform-server</description>
+
     <properties>
         <java.version>21</java.version>
-        <ffmpeg.classifier>windows-x86_64</ffmpeg.classifier>
+        <platform>windows-x86_64</platform>
+        <deployment>split</deployment>
+        <db.type>split</db.type>
     </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-tomcat</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-undertow</artifactId>
         </dependency>
 
         <dependency>
@@ -41,6 +56,16 @@
         <dependency>
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
         </dependency>
 
         <dependency>
@@ -72,7 +97,7 @@
             <groupId>org.bytedeco</groupId>
             <artifactId>ffmpeg</artifactId>
             <version>6.1.1-1.5.10</version>
-            <classifier>${ffmpeg.classifier}</classifier>
+            <classifier>${platform}</classifier>
         </dependency>
         <!-- javacv end -->
 
@@ -164,12 +189,13 @@
         <profile>
             <id>windows</id>
             <activation>
+                <activeByDefault>true</activeByDefault>
                 <os>
                     <family>Windows</family>
                 </os>
             </activation>
             <properties>
-                <ffmpeg.classifier>windows-x86_64</ffmpeg.classifier>
+                <platform>windows-x86_64</platform>
             </properties>
         </profile>
 
@@ -182,7 +208,7 @@
                 </os>
             </activation>
             <properties>
-                <ffmpeg.classifier>linux-x86_64</ffmpeg.classifier>
+                <platform>linux-x86_64</platform>
             </properties>
         </profile>
 
@@ -194,7 +220,23 @@
                 </os>
             </activation>
             <properties>
-                <ffmpeg.classifier>macosx-x86_64</ffmpeg.classifier>
+                <platform>macosx-x86_64</platform>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>mysql</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <db.type>mysql</db.type>
+            </properties>
+        </profile>
+        <profile>
+            <id>sqlite</id>
+            <properties>
+                <db.type>sqlite</db.type>
             </properties>
         </profile>
     </profiles>

@@ -2,6 +2,8 @@ server:
   port: 8080
 
 spring:
+  profiles:
+    active: @platform@,@deployment@,@db.type@
   application:
     name: aigc-platform-server
   servlet:
@@ -27,3 +29,15 @@ remote:
   enable: false
   platform: unix
   model-dir: /model
+
+
+---
+spring:
+  config:
+    activate:
+      on-profile: sqlite
+  datasource:
+    driver-class-name: org.sqlite.JDBC
+    url: jdbc:sqlite:aigc_platform.db
+    username:
+    password:

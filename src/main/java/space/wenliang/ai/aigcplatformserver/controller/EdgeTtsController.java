@@ -24,12 +24,14 @@ public class EdgeTtsController {
 
     @PostMapping("configs")
     public Result<List<EdgeTtsConfigEntity>> configs() {
-        return Result.success(bEdgeTtsService.configs());
+        List<EdgeTtsConfigEntity> configs = bEdgeTtsService.configs();
+        return Result.success(configs);
     }
 
     @PostMapping("settings")
     public Result<List<EdgeTtsSettingEntity>> settings() {
-        return Result.success(bEdgeTtsService.settings());
+        List<EdgeTtsSettingEntity> settings = bEdgeTtsService.settings();
+        return Result.success(settings);
     }
 
     @PostMapping("updateSetting")
