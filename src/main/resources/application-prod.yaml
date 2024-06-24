@@ -27,9 +27,3 @@ remote:
   enable: false
   platform: unix
   model-dir: /model
-
-jasypt:
-  encryptor:
-    password: ${JASYPT_ENCRYPTOR_PASSWORD}
-    algorithm: PBEWithMD5AndDES
-    iv-generator-classname: org.jasypt.iv.NoIvGenerator
