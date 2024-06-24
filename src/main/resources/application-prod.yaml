@@ -14,8 +14,8 @@ spring:
 
   datasource:
     url: jdbc:mysql://mysql/aigc_platform?rewriteBatchedStatements=true&useServerPrepStmts=true&useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
-    username: ENC(Kds0HF0zDkMydaC3j+F9wQ==)
-    password: ENC(tyGw1hzu0GH+EJA2mEK1obOSDRcgSCM7QqfcpYL37JU=)
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
 mybatis-plus:
@@ -27,9 +27,3 @@ remote:
   enable: false
   platform: unix
   model-dir: /model
-
-jasypt:
-  encryptor:
-    password: ${JASYPT_ENCRYPTOR_PASSWORD}
-    algorithm: PBEWithMD5AndDES
-    iv-generator-classname: org.jasypt.iv.NoIvGenerator
