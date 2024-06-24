@@ -18,22 +18,17 @@ pipeline {
             steps {
                 script {
                     // Read env.config file content
-                    def envConfigContent = readFile('/env.config') // 请确保路径正确
+                    def envConfigContent = readFile('/env.config')
 
                     // Split content by line and parse key-value pairs
-                    def envVars = envConfigContent.split("\n").collect { line ->
-                        line.trim()
-                    }.findAll { line ->
-                        line && !line.startsWith('#')
-                    }.collectEntries { line ->
+                    def envVars = envConfigContent.split("\n").collectEntries { line ->
                         def pair = line.split('=')
                         [(pair[0]): pair[1]]
                     }
 
-                    // Set environment variables in the Pipeline env
-                    envVars.each { key, value ->
-                        env[key] = value
-                    }
+                    // Set environment variables explicitly
+                    env.DB_USERNAME = envVars.DB_USERNAME
+                    env.DB_PASSWORD = envVars.DB_PASSWORD
                 }
             }
         }
