@@ -88,7 +88,26 @@ public class BTextChapterServiceImpl implements BTextChapterService {
 
     @Override
     public List<TextChapterEntity> chapters(String projectId) {
-        return aTextChapterService.list(projectId);
+        List<TextChapterEntity> chapterEntities = aTextChapterService.list(projectId);
+        if (!CollectionUtils.isEmpty(chapterEntities)) {
+            Map<String, Long> chapterTextCount = aChapterInfoService.chapterGroupCount();
+            Map<String, Boolean> chapterExportCount = aChapterInfoService.chapterExportCount();
+            Map<String, Long> chapterRoleCount = aTextRoleService.chapterGroupCount();
+
+            chapterEntities = chapterEntities.stream()
+                    .peek(t -> {
+                        t.setTextNum(chapterTextCount.get(t.getChapterId()));
+                        t.setRoleNum(chapterRoleCount.get(t.getChapterId()));
+                        if (chapterExportCount.containsKey(t.getChapterId())) {
+                            t.setStage("处理中");
+                            if (Objects.equals(chapterExportCount.get(t.getChapterId()), Boolean.TRUE)) {
+                                t.setStage("合并完成");
+                            }
+                        }
+                    })
+                    .toList();
+        }
+        return chapterEntities;
     }
 
     @Override
@@ -628,7 +647,7 @@ public class BTextChapterServiceImpl implements BTextChapterService {
                             "audio",
                             c.getIndex() + ".wav");
                     c.setAudioPath(path.toAbsolutePath().toString());
-                    c.setExportFlag(true);
+                    c.setAudioExportFlag(true);
                 })
                 .toList();
 
@@ -656,7 +675,7 @@ public class BTextChapterServiceImpl implements BTextChapterService {
 
         if (Objects.equals(subtitle, Boolean.TRUE)) {
             List<ChapterInfoEntity> handleList = chapterInfos.stream()
-                    .filter(c -> Objects.equals(Boolean.TRUE, c.getExportFlag())).toList();
+                    .filter(c -> Objects.equals(Boolean.TRUE, c.getAudioExportFlag())).toList();
             Path outputSrtPath = pathConfig.buildProjectPath(
                     "text",
                     FileUtils.fileNameFormat(textProject.getProjectName()),

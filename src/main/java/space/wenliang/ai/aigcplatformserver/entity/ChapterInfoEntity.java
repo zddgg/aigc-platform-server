@@ -53,7 +53,7 @@ public class ChapterInfoEntity extends AudioModelConfigExt {
 
     private Long audioLength;
 
-    private Boolean exportFlag;
+    private Boolean audioExportFlag;
 
     @TableField(exist = false)
     private String index;

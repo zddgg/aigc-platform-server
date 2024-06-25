@@ -34,6 +34,7 @@ public class TextProjectController {
 
     @PostMapping("create")
     public Result<Object> create(@RequestParam("project") String project,
+                                 @RequestParam("projectType") String projectType,
                                  @RequestParam("file") MultipartFile file) throws IOException {
 
         Charset charset = FileUtils.detectCharset(file.getBytes());
@@ -48,7 +49,7 @@ public class TextProjectController {
                 }
             }
         }
-        bTextProjectService.create(project, content.toString());
+        bTextProjectService.create(project, projectType, content.toString());
         return Result.success();
     }
 

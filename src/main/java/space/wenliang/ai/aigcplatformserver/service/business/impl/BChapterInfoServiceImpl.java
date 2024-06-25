@@ -19,7 +19,6 @@ import space.wenliang.ai.aigcplatformserver.entity.*;
 import space.wenliang.ai.aigcplatformserver.service.application.*;
 import space.wenliang.ai.aigcplatformserver.service.business.BChapterInfoService;
 import space.wenliang.ai.aigcplatformserver.socket.AudioProcessWebSocketHandler;
-import space.wenliang.ai.aigcplatformserver.util.ChapterUtils;
 import space.wenliang.ai.aigcplatformserver.util.FileUtils;
 
 import java.nio.file.Path;
@@ -102,7 +101,7 @@ public class BChapterInfoServiceImpl implements BChapterInfoService {
         if (CollectionUtils.isEmpty(chapterInfos)) {
             TextChapterEntity textChapterEntity = aTextChapterService.getOne(projectId, chapterId);
 
-            List<ChapterInfoEntity> chapterInfoEntities = initChapterInfo(textChapterEntity);
+            List<ChapterInfoEntity> chapterInfoEntities = aChapterInfoService.buildChapterInfos(textChapterEntity);
 
             aChapterInfoService.deleteByProjectIdAndChapterId(projectId, chapterId);
             aTextRoleService.delete(projectId, chapterId);
@@ -347,45 +346,5 @@ public class BChapterInfoServiceImpl implements BChapterInfoService {
         audioCreateTaskQueue.forEach(t -> creatingIds.add(t.getIndex()));
         j2.put("creatingIds", creatingIds);
         audioProcessWebSocketHandler.sendMessageToProject(chapterInfo.getProjectId(), JSON.toJSONString(j2));
-    }
-
-
-    private List<ChapterInfoEntity> initChapterInfo(TextChapterEntity textChapterEntity) {
-        if (Objects.isNull(textChapterEntity) || StringUtils.isBlank(textChapterEntity.getContent())) {
-            return new ArrayList<>();
-        }
-
-        List<String> dialoguePatterns = StringUtils.isBlank(textChapterEntity.getDialoguePattern())
-                ? List.of()
-                : List.of(textChapterEntity.getDialoguePattern());
-
-        List<ChapterInfoEntity> chapterInfoEntities = new ArrayList<>();
-
-        int paragraphIndex = 0;
-
-        for (String line : textChapterEntity.getContent().split("\n")) {
-            List<Tuple2<String, Boolean>> chapterInfoTuple2s = ChapterUtils.dialogueSplit(line, dialoguePatterns);
-            int sentenceIndex = 0;
-
-            for (Tuple2<String, Boolean> chapterInfoTuple2 : chapterInfoTuple2s) {
-                ChapterInfoEntity chapterInfoEntity = new ChapterInfoEntity();
-                chapterInfoEntity.setProjectId(textChapterEntity.getProjectId());
-                chapterInfoEntity.setChapterId(textChapterEntity.getChapterId());
-                chapterInfoEntity.setParagraphIndex(paragraphIndex);
-                chapterInfoEntity.setSentenceIndex(sentenceIndex);
-                chapterInfoEntity.setText(chapterInfoTuple2._1);
-                chapterInfoEntity.setDialogueFlag(chapterInfoTuple2._2);
-
-                chapterInfoEntity.setRole("旁白");
-
-                chapterInfoEntities.add(chapterInfoEntity);
-
-                sentenceIndex++;
-            }
-
-            paragraphIndex++;
-        }
-
-        return chapterInfoEntities;
     }
 }

@@ -10,7 +10,7 @@ public interface BTextProjectService {
 
     List<TextProject> list();
 
-    void create(String name, String content);
+    void create(String project, String projectType, String content);
 
     List<String> tmpChapterSplit(String projectId, String chapterPattern, String dialoguePattern);
 

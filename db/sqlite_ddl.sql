@@ -36,7 +36,7 @@ create table if not exists chapter_info_entity
     next_audio_interval int          null,
     audio_state         int          null,
     audio_length        bigint       null,
-    export_flag         bit          null
+    audio_export_flag   bit          null
 );
 
 create table if not exists chat_model_config_entity
@@ -2027,6 +2027,7 @@ create table if not exists text_project_entity
     id              integer primary key autoincrement,
     project_id      varchar(255) not null,
     project_name    varchar(255) not null,
+    project_type    varchar(255) not null,
     content         longtext     null,
     chapter_pattern varchar(255) null,
     constraint UK4007hmg24ocw5td2jia1xvk6
