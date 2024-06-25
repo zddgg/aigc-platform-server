@@ -49,7 +49,7 @@ public class PathConfig {
         if (StringUtils.isBlank(domain)) {
             String host = "127.0.0.1";
             String port = env.getProperty("server.port");
-            domain = "http://" + host + ":" + port + "/";
+            domain = "http://" + host + ":" + port;
         }
 
         modelUrl = STR."\{domain}/files/model/";
