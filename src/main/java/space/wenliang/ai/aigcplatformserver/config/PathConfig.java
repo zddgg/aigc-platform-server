@@ -25,6 +25,8 @@ public class PathConfig {
     private String remotePlatform;
     @Value("${remote.model-dir}")
     private String remoteModelDir;
+    @Value("${server.domain:}")
+    private String serverDomain;
 
     private final Environment env;
 
@@ -42,11 +44,16 @@ public class PathConfig {
     public void init() {
         String userDir = env.getProperty("user.dir");
 
-        String host = "127.0.0.1";
-        String port = env.getProperty("server.port");
+        String domain = serverDomain;
 
-        modelUrl = STR."http://\{host}:\{port}/files/model/";
-        projectUrl = STR."http://\{host}:\{port}/files/project/";
+        if (StringUtils.isBlank(domain)) {
+            String host = "127.0.0.1";
+            String port = env.getProperty("server.port");
+            domain = "http://" + host + ":" + port + "/";
+        }
+
+        modelUrl = STR."\{domain}/files/model/";
+        projectUrl = STR."\{domain}/files/project/";
 
         modelDir = env.getProperty("sc_model_dir");
         projectDir = env.getProperty("sc_project_dir");
