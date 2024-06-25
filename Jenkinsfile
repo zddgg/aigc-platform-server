@@ -36,7 +36,7 @@ pipeline {
         stage('Build with Maven') {
             steps {
                 script {
-                    sh 'mvn clean package -DskipTests'
+                    sh 'mvn clean package -DskipTests -Psplit,linux,mysql'
                 }
             }
         }
