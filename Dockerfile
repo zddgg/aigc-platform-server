@@ -8,4 +8,4 @@ WORKDIR /app
 COPY target/aigc-platform-server-1.0.0.jar /app/app.jar
 
 # 启动 Spring Boot 应用程序
-CMD ["java", "--enable-preview", "-Dspring.profiles.active=prod", "-jar", "/app/app.jar"]
+CMD ["java", "--enable-preview", "-Dspring.profiles.active=prod,split,linux,mysql", "-jar", "/app/app.jar"]
