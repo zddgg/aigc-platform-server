@@ -1,6 +1,7 @@
 package space.wenliang.ai.aigcplatformserver.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -21,4 +22,13 @@ public class TextChapterEntity {
     private String content;
 
     private String dialoguePattern;
+
+    @TableField(exist = false)
+    private Long textNum;
+
+    @TableField(exist = false)
+    private Long roleNum;
+
+    @TableField(exist = false)
+    private String stage;
 }

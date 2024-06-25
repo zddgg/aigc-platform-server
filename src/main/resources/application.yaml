@@ -2,6 +2,8 @@ server:
   port: 8080
 
 spring:
+  profiles:
+    active: @platform@,@deployment@,@db.type@
   application:
     name: aigc-platform-server
   servlet:
@@ -20,10 +22,22 @@ spring:
 
 mybatis-plus:
   mapper-locations: classpath:mapper/*.xml
-#  configuration:
-#    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
 remote:
   enable: false
   platform: unix
   model-dir: /model
+
+
+---
+spring:
+  config:
+    activate:
+      on-profile: sqlite
+  datasource:
+    driver-class-name: org.sqlite.JDBC
+    url: jdbc:sqlite:aigc_platform.db
+    username:
+    password:

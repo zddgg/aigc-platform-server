@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import space.wenliang.ai.aigcplatformserver.entity.TextRoleEntity;
 
 import java.util.List;
+import java.util.Map;
 
 public interface ATextRoleService extends IService<TextRoleEntity> {
 
@@ -12,4 +13,6 @@ public interface ATextRoleService extends IService<TextRoleEntity> {
     void delete(String projectId, String chapterId);
 
     void delete(String projectId);
+
+    Map<String, Long> chapterGroupCount();
 }

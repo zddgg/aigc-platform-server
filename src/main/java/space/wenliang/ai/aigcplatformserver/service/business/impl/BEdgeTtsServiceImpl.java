@@ -44,7 +44,8 @@ public class BEdgeTtsServiceImpl implements BEdgeTtsService {
 
     @Override
     public List<EdgeTtsConfigEntity> configs() {
-        List<String> showList = this.settings().stream()
+        List<String> showList = aEdgeTtsSettingService.list()
+                .stream()
                 .filter(c -> Objects.equals(c.getShowFlag(), Boolean.TRUE))
                 .map(EdgeTtsSettingEntity::getEnName)
                 .toList();
@@ -56,12 +57,30 @@ public class BEdgeTtsServiceImpl implements BEdgeTtsService {
 
     @Override
     public List<EdgeTtsSettingEntity> settings() {
-        return aEdgeTtsSettingService.list();
+        List<EdgeTtsSettingEntity> settingEntities = aEdgeTtsSettingService.list();
+        List<EdgeTtsConfigEntity> configEntities = aEdgeTtsConfigService.list();
+
+        Set<String> enNameSet = settingEntities.stream().map(EdgeTtsSettingEntity::getEnName)
+                .collect(Collectors.toSet());
+
+        List<EdgeTtsSettingEntity> newList = configEntities.stream().map(c -> c.getLocale().substring(0, c.getLocale().indexOf("-")))
+                .distinct()
+                .filter(n -> !enNameSet.contains(n))
+                .map(n -> {
+                    EdgeTtsSettingEntity edgeTtsSettingEntity = new EdgeTtsSettingEntity();
+                    edgeTtsSettingEntity.setEnName(n);
+                    return edgeTtsSettingEntity;
+                })
+                .toList();
+
+        settingEntities.addAll(newList);
+
+        return settingEntities;
     }
 
     @Override
     public void updateSetting(EdgeTtsSettingEntity edgeTtsSettingEntity) {
-        aEdgeTtsSettingService.updateById(edgeTtsSettingEntity);
+        aEdgeTtsSettingService.saveOrUpdate(edgeTtsSettingEntity);
     }
 
     @Override

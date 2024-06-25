@@ -1,6 +1,7 @@
 package space.wenliang.ai.aigcplatformserver.service.business.impl;
 
 import io.vavr.Tuple2;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -63,7 +64,7 @@ public class BTextProjectServiceImpl implements BTextProjectService {
     }
 
     @Override
-    public void create(String project, String content) {
+    public void create(String project, String projectType, String content) {
 
         TextProjectEntity entity = aTextProjectService.getByProjectName(project);
         if (Objects.nonNull(entity)) {
@@ -71,10 +72,22 @@ public class BTextProjectServiceImpl implements BTextProjectService {
         }
 
         TextProjectEntity save = new TextProjectEntity();
-        save.setProjectId(IdUtils.uuid());
+        String projectId = IdUtils.uuid();
+        save.setProjectId(projectId);
         save.setProjectName(project);
+        save.setProjectType(projectType);
         save.setContent(content);
         aTextProjectService.save(save);
+
+        if (StringUtils.equals(projectType, "short_text")) {
+            TextChapterEntity textChapterEntity = new TextChapterEntity();
+            textChapterEntity.setProjectId(projectId);
+            textChapterEntity.setChapterId(IdUtils.uuid());
+            textChapterEntity.setChapterName("单章节");
+            textChapterEntity.setContent(content);
+
+            aTextChapterService.save(textChapterEntity);
+        }
     }
 
     @Override

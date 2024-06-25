@@ -16,6 +16,8 @@ public class TextProjectEntity {
 
     private String projectName;
 
+    private String projectType;
+
     private String content;
 
     private String chapterPattern;

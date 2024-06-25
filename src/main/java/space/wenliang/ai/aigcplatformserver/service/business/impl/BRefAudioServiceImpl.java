@@ -186,7 +186,7 @@ public class BRefAudioServiceImpl implements BRefAudioService {
                 .map(refAudioEntity -> {
                     RefAudioSort refAudioSort = new RefAudioSort();
                     refAudioSort.setGroup(refAudioEntity.getAudioGroup());
-                    refAudioSort.setSortOrder(refAudioEntity.getGroupSortOrder());
+                    refAudioSort.setSortOrder(Optional.ofNullable(refAudioEntity.getGroupSortOrder()).orElse(0));
                     refAudioSort.setShowFlag(refAudioEntity.getGroupShowFlag());
                     return refAudioSort;
                 })
