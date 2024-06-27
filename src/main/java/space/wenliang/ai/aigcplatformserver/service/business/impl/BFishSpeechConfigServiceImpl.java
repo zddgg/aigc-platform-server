@@ -27,8 +27,8 @@ public class BFishSpeechConfigServiceImpl implements BFishSpeechConfigService {
     }
 
     @Override
-    public void createConfig(FishSpeechConfigEntity configEntity) {
-        aFishSpeechConfigService.save(configEntity);
+    public void createOrUpdate(FishSpeechConfigEntity configEntity) {
+        aFishSpeechConfigService.saveOrUpdate(configEntity);
     }
 
     @Override

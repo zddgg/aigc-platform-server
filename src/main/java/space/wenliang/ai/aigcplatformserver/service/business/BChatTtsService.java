@@ -12,5 +12,5 @@ public interface BChatTtsService {
 
     void deleteConfig(ChatTtsConfigEntity config);
 
-    void createConfig(ChatTtsConfigEntity chatTtsConfig);
+    void createOrUpdate(ChatTtsConfigEntity chatTtsConfig);
 }

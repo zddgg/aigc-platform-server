@@ -86,6 +86,17 @@ INSERT INTO chat_model_template_entity (template_name, interface_type, host, pat
                                         max_tokens, app_id, api_secret)
 VALUES ('Ollama', 'OpenAi', 'http://127.0.0.1:11434', '/v1/chat/completions', null, 'qwen2:7b', '0.3', '4096', null,
         null);
+INSERT INTO chat_model_template_entity (template_name, interface_type, host, path, api_key, model, temperature,
+                                        max_tokens, app_id, api_secret)
+VALUES ('Glm', 'OpenAi', 'https://open.bigmodel.cn', '/api/paas/v4/chat/completions', null, 'glm-4', '0.3', '4096',
+        null, null);
+INSERT INTO chat_model_template_entity (template_name, interface_type, host, path, api_key, model, temperature,
+                                        max_tokens, app_id, api_secret)
+VALUES ('Spark', 'Spark', 'https://spark-api.xf-yun.com', '/v3.5/chat', null, 'generalv3.5', '0.3', '4096', null, null);
+INSERT INTO chat_model_template_entity (template_name, interface_type, host, path, api_key, model, temperature,
+                                        max_tokens, app_id, api_secret)
+VALUES ('Qwen', 'Qwen', 'https://dashscope.aliyuncs.com', '/api/v1/services/aigc/text-generation/generation', null,
+        'qwen-turbo', '0.3', '2000', null, null);
 
 create table if not exists chat_tts_config_entity
 (

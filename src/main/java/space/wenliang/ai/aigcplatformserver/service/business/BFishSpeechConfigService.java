@@ -10,7 +10,7 @@ public interface BFishSpeechConfigService {
 
     List<FishSpeechConfigEntity> getByConfigName(String configName);
 
-    void createConfig(FishSpeechConfigEntity configEntity);
+    void createOrUpdate(FishSpeechConfigEntity configEntity);
 
     void deleteConfig(FishSpeechConfigEntity config);
 }

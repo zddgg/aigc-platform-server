@@ -97,7 +97,8 @@ public class FishSpeechController {
     }
 
     @PostMapping("createConfig")
-    public Result<Object> createConfig(@RequestParam("configName") String configName,
+    public Result<Object> createConfig(@RequestParam(value = "id", required = false) Integer id,
+                                       @RequestParam("configName") String configName,
 
                                        @RequestParam("temperature") Float temperature,
                                        @RequestParam("topP") Float topP,
@@ -110,13 +111,17 @@ public class FishSpeechController {
                                        @RequestParam(value = "saveAudio", required = false) Boolean saveAudio,
                                        @RequestParam(value = "file", required = false) MultipartFile file) throws Exception {
 
-        List<FishSpeechConfigEntity> configEntities = bFishSpeechConfigService.getByConfigName(configName);
-        if (!CollectionUtils.isEmpty(configEntities)) {
-            throw new BizException("配置名称[" + configName + "]已存在");
+        FishSpeechConfigEntity configEntity = new FishSpeechConfigEntity();
+
+        if (Objects.isNull(id)) {
+            List<FishSpeechConfigEntity> configEntities = bFishSpeechConfigService.getByConfigName(configName);
+            if (!CollectionUtils.isEmpty(configEntities)) {
+                throw new BizException("配置名称[" + configName + "]已存在");
+            }
+            configEntity.setConfigId(IdUtils.uuid());
         }
 
-        FishSpeechConfigEntity configEntity = new FishSpeechConfigEntity();
-        configEntity.setConfigId(IdUtils.uuid());
+        configEntity.setId(id);
         configEntity.setConfigName(configName);
 
         configEntity.setTemperature(temperature);
@@ -126,7 +131,7 @@ public class FishSpeechController {
         configEntity.setModelId(modelId);
         configEntity.setMoodAudioId(moodAudioId);
 
-        bFishSpeechConfigService.createConfig(configEntity);
+        bFishSpeechConfigService.createOrUpdate(configEntity);
 
         if (Objects.equals(saveAudio, Boolean.TRUE) && file != null && StringUtils.isNotBlank(text)) {
             String fileName = FileUtils.fileNameFormat(text);

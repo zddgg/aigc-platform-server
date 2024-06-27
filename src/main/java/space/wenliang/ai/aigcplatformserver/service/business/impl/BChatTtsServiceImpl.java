@@ -32,7 +32,7 @@ public class BChatTtsServiceImpl implements BChatTtsService {
     }
 
     @Override
-    public void createConfig(ChatTtsConfigEntity chatTtsConfig) {
-        aChatTtsConfigService.save(chatTtsConfig);
+    public void createOrUpdate(ChatTtsConfigEntity chatTtsConfig) {
+        aChatTtsConfigService.saveOrUpdate(chatTtsConfig);
     }
 }

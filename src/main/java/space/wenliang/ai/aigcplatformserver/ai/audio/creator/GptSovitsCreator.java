@@ -17,6 +17,7 @@ import space.wenliang.ai.aigcplatformserver.util.PathWrapperUtils;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 @Slf4j
@@ -66,17 +67,39 @@ public class GptSovitsCreator extends AbsAudioCreator {
             params.put("ref_audio_path", refAudioPath);
             params.put("prompt_text", refAudio.getMoodAudioText());
             params.put("prompt_lang", Optional.ofNullable(refAudio.getLanguage()).orElse("zh"));
-            params.put("top_k", config.getTopK());
-            params.put("top_p", config.getTopP());
-            params.put("temperature", config.getTemperature());
-            params.put("text_split_method", config.getTextSplitMethod());
-            params.put("split_bucket", config.getSplitBucket());
-            params.put("speed_factor", config.getSpeedFactor());
-            params.put("fragment_interval", config.getFragmentInterval());
-            params.put("seed", config.getSeed());
-            params.put("media_type", "wav");
-            params.put("parallel_infer", config.getParallelInfer());
-            params.put("repetition_penalty", config.getRepetitionPenalty());
+
+            if (Objects.nonNull(config)) {
+                if (Objects.nonNull(config.getTopK())) {
+                    params.put("top_k", config.getTopK());
+                }
+                if (Objects.nonNull(config.getTopP())) {
+                    params.put("top_p", config.getTopP());
+                }
+                if (Objects.nonNull(config.getTemperature())) {
+                    params.put("temperature", config.getTemperature());
+                }
+                if (Objects.nonNull(config.getTextSplitMethod())) {
+                    params.put("text_split_method", config.getTextSplitMethod());
+                }
+                if (Objects.nonNull(config.getSplitBucket())) {
+                    params.put("split_bucket", config.getSplitBucket());
+                }
+                if (Objects.nonNull(config.getSpeedFactor())) {
+                    params.put("speed_factor", config.getSpeedFactor());
+                }
+                if (Objects.nonNull(config.getFragmentInterval())) {
+                    params.put("fragment_interval", config.getFragmentInterval());
+                }
+                if (Objects.nonNull(config.getSeed())) {
+                    params.put("seed", config.getSeed());
+                }
+                if (Objects.nonNull(config.getParallelInfer())) {
+                    params.put("parallel_infer", config.getParallelInfer());
+                }
+                if (Objects.nonNull(config.getRepetitionPenalty())) {
+                    params.put("repetition_penalty", config.getRepetitionPenalty());
+                }
+            }
         }
 
         return params;
