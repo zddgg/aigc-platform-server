@@ -27,8 +27,8 @@ public class BGptSovitsConfigServiceImpl implements BGptSovitsConfigService {
     }
 
     @Override
-    public void createConfig(GptSovitsConfigEntity configEntity) {
-        aGptSovitsConfigService.save(configEntity);
+    public void createOrUpdate(GptSovitsConfigEntity configEntity) {
+        aGptSovitsConfigService.saveOrUpdate(configEntity);
     }
 
     @Override

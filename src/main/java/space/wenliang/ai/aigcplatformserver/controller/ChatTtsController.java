@@ -50,7 +50,8 @@ public class ChatTtsController {
     }
 
     @PostMapping("createConfig")
-    public Result<Object> createConfig(@RequestParam("configName") String configName,
+    public Result<Object> createConfig(@RequestParam(value = "id", required = false) Integer id,
+                                       @RequestParam("configName") String configName,
                                        @RequestParam("temperature") Float temperature,
                                        @RequestParam("topP") Float topP,
                                        @RequestParam("topK") Integer topK,
@@ -64,14 +65,19 @@ public class ChatTtsController {
                                        @RequestParam(value = "file", required = false) MultipartFile file,
                                        @RequestParam(value = "outputText", required = false) String outputText) throws Exception {
 
-        List<ChatTtsConfigEntity> chatTtsConfigs = bChatTtsService.getByConfigName(configName);
-        if (!CollectionUtils.isEmpty(chatTtsConfigs)) {
-            throw new BizException("配置名称[" + configName + "]已存在");
+        ChatTtsConfigEntity chatTtsConfig = new ChatTtsConfigEntity();
+
+        if (Objects.isNull(id)) {
+            List<ChatTtsConfigEntity> chatTtsConfigs = bChatTtsService.getByConfigName(configName);
+            if (!CollectionUtils.isEmpty(chatTtsConfigs)) {
+                throw new BizException("配置名称[" + configName + "]已存在");
+            }
+            chatTtsConfig.setConfigId(IdUtils.uuid());
         }
 
-        ChatTtsConfigEntity chatTtsConfig = new ChatTtsConfigEntity();
-        chatTtsConfig.setConfigId(IdUtils.uuid());
+        chatTtsConfig.setId(id);
         chatTtsConfig.setConfigName(configName);
+
         chatTtsConfig.setTemperature(temperature);
         chatTtsConfig.setTopP(topP);
         chatTtsConfig.setTopK(topK);
@@ -83,7 +89,7 @@ public class ChatTtsController {
         chatTtsConfig.setText(text);
         chatTtsConfig.setOutputText(outputText);
 
-        bChatTtsService.createConfig(chatTtsConfig);
+        bChatTtsService.createOrUpdate(chatTtsConfig);
 
         if (Objects.equals(saveAudio, Boolean.TRUE) && file != null && StringUtils.isNotBlank(outputText)) {
             String fileName = FileUtils.fileNameFormat(outputText);

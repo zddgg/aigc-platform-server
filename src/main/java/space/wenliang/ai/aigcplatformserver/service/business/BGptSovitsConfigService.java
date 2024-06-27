@@ -10,7 +10,7 @@ public interface BGptSovitsConfigService {
 
     List<GptSovitsConfigEntity> getByConfigName(String configName);
 
-    void createConfig(GptSovitsConfigEntity configEntity);
+    void createOrUpdate(GptSovitsConfigEntity configEntity);
 
     void deleteConfig(GptSovitsConfigEntity config);
 }
