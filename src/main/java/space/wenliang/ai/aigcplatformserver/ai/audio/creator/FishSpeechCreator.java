@@ -12,6 +12,7 @@ import space.wenliang.ai.aigcplatformserver.util.PathWrapperUtils;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 @Slf4j
 @Service("fish-speech")
@@ -42,10 +43,17 @@ public class FishSpeechCreator extends AbsAudioCreator {
         params.put("reference_audio_path", refAudioPath);
         params.put("reference_text", refAudio.getMoodAudioText());
 
-        params.put("top_p", config.getTopP());
-        params.put("temperature", config.getTemperature());
-        params.put("repetition_penalty", config.getRepetitionPenalty());
-
+        if (Objects.nonNull(config)) {
+            if (Objects.nonNull(config.getTopP())) {
+                params.put("top_p", config.getTopP());
+            }
+            if (Objects.nonNull(config.getTemperature())) {
+                params.put("temperature", config.getTemperature());
+            }
+            if (Objects.nonNull(config.getRepetitionPenalty())) {
+                params.put("repetition_penalty", config.getRepetitionPenalty());
+            }
+        }
 
         return params;
     }
