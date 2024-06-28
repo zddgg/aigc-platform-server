@@ -314,6 +314,12 @@ public class BTextChapterServiceImpl implements BTextChapterService {
                         textRoleEntity.setAgeGroup(roleInferenceEntity.getAgeGroup());
                         TextCommonRoleEntity commonRole = commonRoleMap.get(roleInferenceEntity.getRole());
                         if (Objects.nonNull(commonRole)) {
+                            if (Objects.isNull(textRoleEntity.getGender())) {
+                                textRoleEntity.setGender(commonRole.getGender());
+                            }
+                            if (Objects.isNull(textRoleEntity.getAgeGroup())) {
+                                textRoleEntity.setAgeGroup(commonRole.getAgeGroup());
+                            }
                             textRoleEntity.setAudioModelType(commonRole.getAudioModelType());
                             textRoleEntity.setAudioModelId(commonRole.getAudioModelId());
                             textRoleEntity.setAudioConfigId(commonRole.getAudioConfigId());
@@ -322,15 +328,25 @@ public class BTextChapterServiceImpl implements BTextChapterService {
                         return textRoleEntity;
                     }).toList();
 
-            aTextRoleService.delete(projectId, chapterId);
-            aTextRoleService.saveBatch(textRoleEntities);
-
             Map<String, RoleInferenceEntity> roleInferenceEntityMap = roleInferenceEntities.stream()
                     .collect(Collectors.toMap(RoleInferenceEntity::getTextIndex, Function.identity(), (a, _) -> a));
 
             List<ChapterInfoEntity> chapterInfoEntities = aChapterInfoService.list(projectId, chapterId);
 
             List<Integer> audioModelResetIds = new ArrayList<>();
+
+            String asideRole = "旁白";
+
+            Optional<TextRoleEntity> hasAsideRole = textRoleEntities
+                    .stream()
+                    .filter(c -> StringUtils.equals(c.getRole(), asideRole))
+                    .findFirst();
+
+            Optional<ChapterInfoEntity> hasAsideText = chapterInfoEntities
+                    .stream()
+                    .filter(c -> StringUtils.equals(c.getRole(), asideRole))
+                    .findFirst();
+
             List<ChapterInfoEntity> saveInfos = chapterInfoEntities.stream()
                     .filter(c -> roleInferenceEntityMap.containsKey(c.getIndex()))
                     .peek(c -> {
@@ -350,6 +366,27 @@ public class BTextChapterServiceImpl implements BTextChapterService {
 
             aChapterInfoService.updateBatchById(saveInfos);
             aChapterInfoService.audioModelReset(audioModelResetIds);
+
+            ArrayList<TextRoleEntity> saveTextRoles = new ArrayList<>(textRoleEntities);
+
+            if (hasAsideRole.isEmpty() && hasAsideText.isPresent()) {
+
+                TextRoleEntity textRoleEntity = new TextRoleEntity();
+                textRoleEntity.setProjectId(projectId);
+                textRoleEntity.setChapterId(chapterId);
+                textRoleEntity.setRole(asideRole);
+                TextCommonRoleEntity commonRole = commonRoleMap.get(asideRole);
+                if (Objects.nonNull(commonRole)) {
+                    textRoleEntity.setAudioModelType(commonRole.getAudioModelType());
+                    textRoleEntity.setAudioModelId(commonRole.getAudioModelId());
+                    textRoleEntity.setAudioConfigId(commonRole.getAudioConfigId());
+                    textRoleEntity.setRefAudioId(commonRole.getRefAudioId());
+                }
+                saveTextRoles.add(textRoleEntity);
+            }
+
+            aTextRoleService.delete(projectId, chapterId);
+            aTextRoleService.saveBatch(saveTextRoles);
         }
     }
 
@@ -762,7 +799,14 @@ public class BTextChapterServiceImpl implements BTextChapterService {
                         textRoleEntity.setGender(role.getGender());
                         textRoleEntity.setAgeGroup(role.getAgeGroup());
 
-                        if (commonRoleMap.containsKey(role.getRole())) {
+                        TextCommonRoleEntity commonRole = commonRoleMap.get(role.getRole());
+                        if (Objects.nonNull(commonRole)) {
+                            if (Objects.isNull(textRoleEntity.getGender())) {
+                                textRoleEntity.setGender(commonRole.getGender());
+                            }
+                            if (Objects.isNull(textRoleEntity.getAgeGroup())) {
+                                textRoleEntity.setAgeGroup(commonRole.getAgeGroup());
+                            }
                             textRoleEntity.setAudioModelType(commonRoleMap.get(role.getRole()).getAudioModelType());
                             textRoleEntity.setAudioModelId(commonRoleMap.get(role.getRole()).getAudioModelId());
                             textRoleEntity.setAudioConfigId(commonRoleMap.get(role.getRole()).getAudioConfigId());
