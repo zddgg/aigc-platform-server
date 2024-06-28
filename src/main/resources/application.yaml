@@ -1,6 +1,14 @@
 server:
   port: 8080
   domain: http://127.0.0.1:8080
+  tomcat:
+    connection-timeout: 600000
+    threads:
+      max: 200
+    max-connections: 10000
+    accept-count: 1000
+    max-http-form-post-size: 104857600
+    keep-alive-timeout: 600000
 
 spring:
   profiles:
