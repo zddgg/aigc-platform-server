@@ -9,6 +9,6 @@ import space.wenliang.ai.aigcplatformserver.entity.ChatModelConfigEntity;
 public interface ChatModelConfigMapper extends BaseMapper<ChatModelConfigEntity> {
 
 
-    @Update("update chat_model_config_entity c set c.active = IF(c.id = #{id}, 1, 0)")
+    @Update("UPDATE chat_model_config_entity SET active = CASE WHEN id = #{id} THEN 1 ELSE 0 END")
     void activeConfig(Integer id);
 }
