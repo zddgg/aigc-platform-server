@@ -1,6 +1,6 @@
 package space.wenliang.ai.aigcplatformserver.controller;
 
-import cn.hutool.core.codec.Base64;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -15,15 +15,16 @@ import space.wenliang.ai.aigcplatformserver.config.PathConfig;
 import space.wenliang.ai.aigcplatformserver.entity.ChatTtsConfigEntity;
 import space.wenliang.ai.aigcplatformserver.exception.BizException;
 import space.wenliang.ai.aigcplatformserver.service.business.BChatTtsService;
+import space.wenliang.ai.aigcplatformserver.socket.GlobalWebSocketHandler;
 import space.wenliang.ai.aigcplatformserver.util.FileUtils;
 import space.wenliang.ai.aigcplatformserver.util.IdUtils;
 
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 
+@Slf4j
 @RestController
 @RequestMapping("chatTts")
 public class ChatTtsController {
@@ -31,11 +32,16 @@ public class ChatTtsController {
     private final PathConfig pathConfig;
     private final AudioCreator audioCreator;
     private final BChatTtsService bChatTtsService;
+    private final GlobalWebSocketHandler globalWebSocketHandler;
 
-    public ChatTtsController(PathConfig pathConfig, AudioCreator audioCreator, BChatTtsService bChatTtsService) {
+    public ChatTtsController(PathConfig pathConfig,
+                             AudioCreator audioCreator,
+                             BChatTtsService bChatTtsService,
+                             GlobalWebSocketHandler globalWebSocketHandler) {
         this.pathConfig = pathConfig;
         this.audioCreator = audioCreator;
         this.bChatTtsService = bChatTtsService;
+        this.globalWebSocketHandler = globalWebSocketHandler;
     }
 
     @PostMapping("configs")
@@ -121,9 +127,9 @@ public class ChatTtsController {
                     .header("x-text-data", headers.getFirst("x-text-data"))
                     .body(audioResponse.getBody());
         } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .header("msg", Base64.encode(e.getMessage().getBytes(StandardCharsets.UTF_8)))
-                    .body(null);
+            log.error(e.getMessage(), e);
+            globalWebSocketHandler.sendErrorMessage(e.getMessage());
+            return ResponseEntity.ok().body(null);
         }
     }
 }
