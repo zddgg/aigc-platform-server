@@ -74,6 +74,7 @@ pipeline {
                     -e DB_USERNAME=${env.DB_USERNAME} \
                     -e DB_PASSWORD=${env.DB_PASSWORD} \
                     -v /root/work/docker/aigc-platform-server/model:/app/model \
+                    -v /root/work/docker/aigc-platform-server/project:/app/project \
                     ${IMAGE_NAME}:${IMAGE_TAG}
                     """
                 }
