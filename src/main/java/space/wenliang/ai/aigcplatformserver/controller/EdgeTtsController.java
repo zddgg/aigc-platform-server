@@ -1,6 +1,7 @@
 package space.wenliang.ai.aigcplatformserver.controller;
 
-import cn.hutool.core.codec.Base64;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,21 +15,26 @@ import space.wenliang.ai.aigcplatformserver.common.Result;
 import space.wenliang.ai.aigcplatformserver.entity.EdgeTtsConfigEntity;
 import space.wenliang.ai.aigcplatformserver.entity.EdgeTtsSettingEntity;
 import space.wenliang.ai.aigcplatformserver.service.business.BEdgeTtsService;
+import space.wenliang.ai.aigcplatformserver.socket.GlobalWebSocketHandler;
 import space.wenliang.ai.aigcplatformserver.spring.annotation.SingleValueParam;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @RestController
 @RequestMapping("edgeTts")
 public class EdgeTtsController {
 
+    private static final Logger log = LoggerFactory.getLogger(EdgeTtsController.class);
     private final AudioCreator audioCreator;
     private final BEdgeTtsService bEdgeTtsService;
+    private final GlobalWebSocketHandler globalWebSocketHandler;
 
-    public EdgeTtsController(AudioCreator audioCreator, BEdgeTtsService bEdgeTtsService) {
+    public EdgeTtsController(AudioCreator audioCreator,
+                             BEdgeTtsService bEdgeTtsService,
+                             GlobalWebSocketHandler globalWebSocketHandler) {
         this.audioCreator = audioCreator;
         this.bEdgeTtsService = bEdgeTtsService;
+        this.globalWebSocketHandler = globalWebSocketHandler;
     }
 
     @PostMapping("configs")
@@ -79,9 +85,9 @@ public class EdgeTtsController {
                     .header(HttpHeaders.CONTENT_TYPE, headers.getFirst(HttpHeaders.CONTENT_TYPE))
                     .body(audioResponse.getBody());
         } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .header("msg", Base64.encode(e.getMessage().getBytes(StandardCharsets.UTF_8)))
-                    .body(null);
+            log.error(e.getMessage(), e);
+            globalWebSocketHandler.sendErrorMessage(e.getMessage());
+            return ResponseEntity.ok().body(null);
         }
     }
 }

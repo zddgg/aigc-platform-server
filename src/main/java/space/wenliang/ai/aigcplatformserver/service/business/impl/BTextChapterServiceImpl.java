@@ -22,6 +22,7 @@ import space.wenliang.ai.aigcplatformserver.entity.*;
 import space.wenliang.ai.aigcplatformserver.exception.BizException;
 import space.wenliang.ai.aigcplatformserver.service.application.*;
 import space.wenliang.ai.aigcplatformserver.service.business.BTextChapterService;
+import space.wenliang.ai.aigcplatformserver.socket.GlobalWebSocketHandler;
 import space.wenliang.ai.aigcplatformserver.util.AudioUtils;
 import space.wenliang.ai.aigcplatformserver.util.ChapterUtils;
 import space.wenliang.ai.aigcplatformserver.util.FileUtils;
@@ -55,6 +56,7 @@ public class BTextChapterServiceImpl implements BTextChapterService {
     private final AChatTtsConfigService aChatTtsConfigService;
     private final AEdgeTtsConfigService aEdgeTtsConfigService;
     private final PathConfig pathConfig;
+    private final GlobalWebSocketHandler globalWebSocketHandler;
 
     public BTextChapterServiceImpl(AiService aiService,
                                    ATextRoleService aTextRoleService,
@@ -68,7 +70,9 @@ public class BTextChapterServiceImpl implements BTextChapterService {
                                    AFishSpeechModelService aFishSpeechModelService,
                                    AFishSpeechConfigService aFishSpeechConfigService,
                                    AChatTtsConfigService aChatTtsConfigService,
-                                   AEdgeTtsConfigService aEdgeTtsConfigService, PathConfig pathConfig) {
+                                   AEdgeTtsConfigService aEdgeTtsConfigService,
+                                   PathConfig pathConfig,
+                                   GlobalWebSocketHandler globalWebSocketHandler) {
         this.aiService = aiService;
         this.aTextRoleService = aTextRoleService;
         this.aTextChapterService = aTextChapterService;
@@ -84,6 +88,7 @@ public class BTextChapterServiceImpl implements BTextChapterService {
         this.aChatTtsConfigService = aChatTtsConfigService;
         this.aEdgeTtsConfigService = aEdgeTtsConfigService;
         this.pathConfig = pathConfig;
+        this.globalWebSocketHandler = globalWebSocketHandler;
     }
 
     @Override
@@ -576,6 +581,7 @@ public class BTextChapterServiceImpl implements BTextChapterService {
                 .set(ChapterInfoEntity::getAudioModelId, textRoleEntity.getAudioModelId())
                 .set(ChapterInfoEntity::getAudioConfigId, textRoleEntity.getAudioConfigId())
                 .set(ChapterInfoEntity::getRefAudioId, textRoleEntity.getRefAudioId())
+                .set(ChapterInfoEntity::getAudioState, ChapterInfoEntity.modified)
                 .eq(ChapterInfoEntity::getProjectId, textRoleEntity.getProjectId())
                 .eq(ChapterInfoEntity::getChapterId, textRoleEntity.getChapterId())
                 .eq(ChapterInfoEntity::getRole, cache.getRole()));
@@ -586,6 +592,7 @@ public class BTextChapterServiceImpl implements BTextChapterService {
         ChapterInfoEntity chapterInfoEntity = aChapterInfoService.getById(textRoleChange.getChapterInfoId());
 
         chapterInfoEntity.setRole(textRoleChange.getFormRoleName());
+        chapterInfoEntity.setAudioState(ChapterInfoEntity.modified);
 
         TextRoleEntity textRoleEntity = aTextRoleService.getOne(new LambdaQueryWrapper<TextRoleEntity>()
                 .eq(TextRoleEntity::getProjectId, textRoleChange.getProjectId())
@@ -652,6 +659,7 @@ public class BTextChapterServiceImpl implements BTextChapterService {
                         c.setAudioModelId(toRole.getAudioModelId());
                         c.setAudioConfigId(toRole.getAudioConfigId());
                         c.setRefAudioId(toRole.getRefAudioId());
+                        c.setAudioState(ChapterInfoEntity.modified);
                     }).toList();
 
             aChapterInfoService.saveOrUpdateBatch(chapterInfoEntities);
@@ -744,7 +752,7 @@ public class BTextChapterServiceImpl implements BTextChapterService {
             String text = formatAiResult(aiResultStr);
 
             if (!JSON.isValid(text)) {
-                throw new BizException("文本大模型返回格式不正确");
+                globalWebSocketHandler.sendErrorMessage("文本大模型返回格式不正确");
             }
 
             AiResult aiResult = JSON.parseObject(text, AiResult.class);

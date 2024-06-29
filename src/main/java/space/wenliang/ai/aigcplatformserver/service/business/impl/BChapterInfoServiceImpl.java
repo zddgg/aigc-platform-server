@@ -19,6 +19,7 @@ import space.wenliang.ai.aigcplatformserver.entity.*;
 import space.wenliang.ai.aigcplatformserver.service.application.*;
 import space.wenliang.ai.aigcplatformserver.service.business.BChapterInfoService;
 import space.wenliang.ai.aigcplatformserver.socket.AudioProcessWebSocketHandler;
+import space.wenliang.ai.aigcplatformserver.socket.GlobalWebSocketHandler;
 import space.wenliang.ai.aigcplatformserver.util.FileUtils;
 
 import java.nio.file.Path;
@@ -51,6 +52,7 @@ public class BChapterInfoServiceImpl implements BChapterInfoService {
     private final ATextRoleService aTextRoleService;
     private final AudioCreator audioCreator;
     private final PathConfig pathConfig;
+    private final GlobalWebSocketHandler globalWebSocketHandler;
 
     private final AudioProcessWebSocketHandler audioProcessWebSocketHandler;
 
@@ -66,7 +68,7 @@ public class BChapterInfoServiceImpl implements BChapterInfoService {
                                    ATextCommonRoleService aTextCommonRoleService,
                                    ATextRoleService aTextRoleService,
                                    AudioCreator audioCreator,
-                                   PathConfig pathConfig,
+                                   PathConfig pathConfig, GlobalWebSocketHandler globalWebSocketHandler,
                                    AudioProcessWebSocketHandler audioProcessWebSocketHandler) {
         this.aChapterInfoService = aChapterInfoService;
         this.aTextChapterService = aTextChapterService;
@@ -82,6 +84,7 @@ public class BChapterInfoServiceImpl implements BChapterInfoService {
         this.aTextRoleService = aTextRoleService;
         this.audioCreator = audioCreator;
         this.pathConfig = pathConfig;
+        this.globalWebSocketHandler = globalWebSocketHandler;
         this.audioProcessWebSocketHandler = audioProcessWebSocketHandler;
     }
 
@@ -199,6 +202,7 @@ public class BChapterInfoServiceImpl implements BChapterInfoService {
 
     @Override
     public void audioModelChange(ChapterInfoEntity chapterInfoEntity) {
+        chapterInfoEntity.setAudioState(ChapterInfoEntity.modified);
         aChapterInfoService.updateById(chapterInfoEntity);
     }
 
@@ -206,6 +210,7 @@ public class BChapterInfoServiceImpl implements BChapterInfoService {
     public void updateVolume(ChapterInfoEntity chapterInfoEntity) {
         aChapterInfoService.update(new LambdaUpdateWrapper<ChapterInfoEntity>()
                 .set(ChapterInfoEntity::getAudioVolume, chapterInfoEntity.getAudioVolume())
+                .set(ChapterInfoEntity::getAudioState, ChapterInfoEntity.modified)
                 .eq(ChapterInfoEntity::getId, chapterInfoEntity.getId()));
     }
 
@@ -213,6 +218,7 @@ public class BChapterInfoServiceImpl implements BChapterInfoService {
     public void updateSpeed(ChapterInfoEntity chapterInfoEntity) {
         aChapterInfoService.update(new LambdaUpdateWrapper<ChapterInfoEntity>()
                 .set(ChapterInfoEntity::getAudioSpeed, chapterInfoEntity.getAudioSpeed())
+                .set(ChapterInfoEntity::getAudioState, ChapterInfoEntity.modified)
                 .eq(ChapterInfoEntity::getId, chapterInfoEntity.getId()));
     }
 
@@ -220,6 +226,7 @@ public class BChapterInfoServiceImpl implements BChapterInfoService {
     public void updateInterval(ChapterInfoEntity chapterInfoEntity) {
         aChapterInfoService.update(new LambdaUpdateWrapper<ChapterInfoEntity>()
                 .set(ChapterInfoEntity::getNextAudioInterval, chapterInfoEntity.getNextAudioInterval())
+                .set(ChapterInfoEntity::getAudioState, ChapterInfoEntity.modified)
                 .eq(ChapterInfoEntity::getId, chapterInfoEntity.getId()));
     }
 
@@ -236,6 +243,7 @@ public class BChapterInfoServiceImpl implements BChapterInfoService {
             if (Objects.equals(controlsUpdate.getEnableInterval(), Boolean.TRUE)) {
                 chapterInfoEntity.setNextAudioInterval(controlsUpdate.getInterval());
             }
+            chapterInfoEntity.setAudioState(ChapterInfoEntity.modified);
         }
 
         aChapterInfoService.updateBatchById(chapterInfoEntities);
@@ -245,6 +253,7 @@ public class BChapterInfoServiceImpl implements BChapterInfoService {
     public void updateChapterText(ChapterInfoEntity chapterInfoEntity) {
         aChapterInfoService.update(new LambdaUpdateWrapper<ChapterInfoEntity>()
                 .set(ChapterInfoEntity::getText, chapterInfoEntity.getText())
+                .set(ChapterInfoEntity::getAudioState, ChapterInfoEntity.modified)
                 .eq(ChapterInfoEntity::getId, chapterInfoEntity.getId()));
     }
 
@@ -289,6 +298,7 @@ public class BChapterInfoServiceImpl implements BChapterInfoService {
                             createAudio(audioContext);
                         } catch (Exception e) {
                             log.error(e.getMessage(), e);
+                            globalWebSocketHandler.sendErrorMessage(e.getMessage());
                         }
                     }
                 }, Executors.newFixedThreadPool(1))
@@ -318,33 +328,36 @@ public class BChapterInfoServiceImpl implements BChapterInfoService {
         audioContext.setOutputDir(outputDir.toAbsolutePath().toString());
         audioContext.setOutputName(chapterInfo.getIndex());
 
-        audioCreator.createFile(audioContext);
+        try {
+            audioCreator.createFile(audioContext);
 
-        aChapterInfoService.updateAudioStage(chapterInfo.getId(), ChapterInfoEntity.created);
+            aChapterInfoService.updateAudioStage(chapterInfo.getId(), ChapterInfoEntity.created);
 
-        chapterInfo.setAudioUrl(pathConfig.buildProjectUrl(
-                "text",
-                FileUtils.fileNameFormat(textProject.getProjectName()),
-                FileUtils.fileNameFormat(textChapter.getChapterName()),
-                "audio",
-                chapterInfo.getIndex() + ".wav"));
+            chapterInfo.setAudioUrl(pathConfig.buildProjectUrl(
+                    "text",
+                    FileUtils.fileNameFormat(textProject.getProjectName()),
+                    FileUtils.fileNameFormat(textChapter.getChapterName()),
+                    "audio",
+                    chapterInfo.getIndex() + ".wav"));
 
-        JSONObject j1 = new JSONObject();
-        j1.put("type", "result");
-        j1.put("projectId", chapterInfo.getProjectId());
-        j1.put("chapterId", chapterInfo.getChapterId());
-        j1.put("chapterInfo", chapterInfo);
-        audioProcessWebSocketHandler.sendMessageToProject(chapterInfo.getProjectId(), JSON.toJSONString(j1));
+            JSONObject j1 = new JSONObject();
+            j1.put("type", "result");
+            j1.put("projectId", chapterInfo.getProjectId());
+            j1.put("chapterId", chapterInfo.getChapterId());
+            j1.put("chapterInfo", chapterInfo);
+            audioProcessWebSocketHandler.sendMessageToProject(chapterInfo.getProjectId(), JSON.toJSONString(j1));
 
-        JSONObject j2 = new JSONObject();
-        j2.put("type", "stage");
-        j1.put("projectId", chapterInfo.getProjectId());
-        j1.put("chapterId", chapterInfo.getChapterId());
-        j2.put("taskNum", audioCreateTaskQueue.size());
+        } finally {
+            JSONObject j2 = new JSONObject();
+            j2.put("type", "stage");
+            j2.put("projectId", chapterInfo.getProjectId());
+            j2.put("chapterId", chapterInfo.getChapterId());
+            j2.put("taskNum", audioCreateTaskQueue.size());
 
-        List<String> creatingIds = new ArrayList<>();
-        audioCreateTaskQueue.forEach(t -> creatingIds.add(t.getIndex()));
-        j2.put("creatingIds", creatingIds);
-        audioProcessWebSocketHandler.sendMessageToProject(chapterInfo.getProjectId(), JSON.toJSONString(j2));
+            List<String> creatingIds = new ArrayList<>();
+            audioCreateTaskQueue.forEach(t -> creatingIds.add(t.getIndex()));
+            j2.put("creatingIds", creatingIds);
+            audioProcessWebSocketHandler.sendMessageToProject(chapterInfo.getProjectId(), JSON.toJSONString(j2));
+        }
     }
 }
