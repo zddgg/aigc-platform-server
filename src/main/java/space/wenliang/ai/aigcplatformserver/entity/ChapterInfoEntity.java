@@ -28,6 +28,8 @@ public class ChapterInfoEntity extends AudioModelConfigExt {
 
     private Integer paragraphIndex;
 
+    private Integer splitIndex;
+
     private Integer sentenceIndex;
 
     private String text;
@@ -59,8 +61,16 @@ public class ChapterInfoEntity extends AudioModelConfigExt {
     private String index;
 
     public String getIndex() {
-        if (Objects.nonNull(paragraphIndex) && Objects.nonNull(sentenceIndex)) {
-            return paragraphIndex + "-" + sentenceIndex;
+        if (Objects.nonNull(paragraphIndex) && Objects.nonNull(splitIndex) && Objects.nonNull(sentenceIndex)) {
+            return paragraphIndex + "-" + splitIndex + "-" + sentenceIndex;
+        }
+        return null;
+    }
+
+
+    public String getSecondIndex() {
+        if (Objects.nonNull(paragraphIndex) && Objects.nonNull(splitIndex)) {
+            return paragraphIndex + "-" + splitIndex;
         }
         return null;
     }

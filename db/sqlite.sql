@@ -22,6 +22,7 @@ create table if not exists chapter_info_entity
     project_id          varchar(255) null,
     chapter_id          varchar(255) null,
     paragraph_index     int          null,
+    split_index         int          null,
     sentence_index      int          null,
     text                longtext     null,
     text_lang           varchar(255) null,

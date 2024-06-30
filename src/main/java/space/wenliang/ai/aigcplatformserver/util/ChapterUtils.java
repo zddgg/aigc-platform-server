@@ -72,24 +72,34 @@ public class ChapterUtils {
         return line.matches(chapterTitlePattern);
     }
 
-    public static List<Tuple2<String, Boolean>> dialogueSplit(String line, List<String> linesModifiers) {
-        List<Tuple2<String, Boolean>> sentences = new ArrayList<>();
+    public static List<Tuple2<Boolean, List<String>>> dialogueSplit(String line, List<String> linesModifiers) {
+        List<Tuple2<Boolean, List<String>>> sentences = new ArrayList<>();
 
         if (CollectionUtils.isEmpty(linesModifiers)) {
-            return List.of(Tuple.of(line, false));
+            return List.of(Tuple.of(false, List.of(line)));
         }
 
         Matcher matcher = buildModifiersPatternStr(linesModifiers).matcher(line);
         int lastIndex = 0;
         while (matcher.find()) {
             if (matcher.start() > lastIndex) {
-                sentences.add(Tuple.of(line.substring(lastIndex, matcher.start()).trim(), false));
+                String text = line.substring(lastIndex, matcher.start()).trim();
+                List<String> strings = textLenFormat(text);
+                sentences.add(Tuple.of(false, strings));
             }
-            sentences.add(Tuple.of(line.substring(matcher.start(), matcher.end()).trim(), true));
+
+            String text = line.substring(matcher.start(), matcher.end()).trim();
+            List<String> strings = textLenFormat(text.substring(1, text.length() - 1));
+            sentences.add(Tuple.of(true, strings));
+
+//            sentences.add(Tuple.of(line.substring(matcher.start(), matcher.end()).trim(), true));
+
             lastIndex = matcher.end();
         }
         if (lastIndex < line.length()) {
-            sentences.add(Tuple.of(line.substring(lastIndex).trim(), false));
+            String text = line.substring(lastIndex).trim();
+            List<String> strings = textLenFormat(text);
+            sentences.add(Tuple.of(false, strings));
         }
         return sentences;
     }
@@ -105,5 +115,54 @@ public class ChapterUtils {
                 }).filter(Objects::nonNull)
                 .collect(Collectors.joining("|"));
         return Pattern.compile(patternStr);
+    }
+
+
+    private static final int MAX_CHARS_PER_LINE = 37;
+    private static final int MIN_CHARS_PER_LINE = MAX_CHARS_PER_LINE / 3;
+    private static final String PUNCTUATION = "，。！？；：,.!?;:";
+
+    public static List<String> textLenFormat(String text) {
+        List<String> result = new ArrayList<>();
+        if (text == null || text.isEmpty()) {
+            return result;
+        }
+
+        int start = 0;
+        while (start < text.length()) {
+            int end = findSplitPoint(text, start, MAX_CHARS_PER_LINE);
+            String subtitle = text.substring(start, end).trim();
+
+            if (!result.isEmpty() && subtitle.length() < MIN_CHARS_PER_LINE) {
+                String lastSubtitle = result.remove(result.size() - 1);
+                subtitle = lastSubtitle + " " + subtitle;
+            }
+
+            result.add(subtitle);
+            start = end;
+        }
+
+        return result;
+    }
+
+    private static int findSplitPoint(String text, int start, int maxLength) {
+        int end = start + maxLength;
+        if (end >= text.length()) {
+            return text.length();
+        }
+
+        for (int i = end; i > start; i--) {
+            if (PUNCTUATION.indexOf(text.charAt(i)) != -1) {
+                return i + 1;
+            }
+        }
+
+        for (int i = end; i < text.length(); i++) {
+            if (PUNCTUATION.indexOf(text.charAt(i)) != -1) {
+                return i + 1;
+            }
+        }
+
+        return text.length();
     }
 }

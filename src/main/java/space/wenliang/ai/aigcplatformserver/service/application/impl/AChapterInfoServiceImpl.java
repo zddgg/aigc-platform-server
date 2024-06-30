@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import io.vavr.Tuple2;
+import io.vavr.Tuple3;
+import io.vavr.Tuple4;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import space.wenliang.ai.aigcplatformserver.bean.GroupCount;
@@ -93,23 +95,29 @@ public class AChapterInfoServiceImpl extends ServiceImpl<ChapterInfoMapper, Chap
         int paragraphIndex = 0;
 
         for (String line : textChapterEntity.getContent().split("\n")) {
-            List<Tuple2<String, Boolean>> chapterInfoTuple2s = ChapterUtils.dialogueSplit(line, dialoguePatterns);
-            int sentenceIndex = 0;
+            int splitIndex = 0;
 
-            for (Tuple2<String, Boolean> chapterInfoTuple2 : chapterInfoTuple2s) {
-                ChapterInfoEntity chapterInfoEntity = new ChapterInfoEntity();
-                chapterInfoEntity.setProjectId(textChapterEntity.getProjectId());
-                chapterInfoEntity.setChapterId(textChapterEntity.getChapterId());
-                chapterInfoEntity.setParagraphIndex(paragraphIndex);
-                chapterInfoEntity.setSentenceIndex(sentenceIndex);
-                chapterInfoEntity.setText(chapterInfoTuple2._1);
-                chapterInfoEntity.setDialogueFlag(chapterInfoTuple2._2);
+            List<Tuple2<Boolean, List<String>>> chapterInfoTuple2s = ChapterUtils.dialogueSplit(line, dialoguePatterns);
 
-                chapterInfoEntity.setRole("旁白");
+            for (Tuple2<Boolean, List<String>> chapterInfoTuple2 : chapterInfoTuple2s) {
 
-                chapterInfoEntities.add(chapterInfoEntity);
+                for (int i = 0; i < chapterInfoTuple2._2.size(); i++) {
+                    ChapterInfoEntity chapterInfoEntity = new ChapterInfoEntity();
+                    chapterInfoEntity.setProjectId(textChapterEntity.getProjectId());
+                    chapterInfoEntity.setChapterId(textChapterEntity.getChapterId());
+                    chapterInfoEntity.setParagraphIndex(paragraphIndex);
+                    chapterInfoEntity.setSplitIndex(splitIndex);
+                    chapterInfoEntity.setSentenceIndex(i);
+                    chapterInfoEntity.setText(chapterInfoTuple2._2.get(i));
+                    chapterInfoEntity.setDialogueFlag(chapterInfoTuple2._1);
 
-                sentenceIndex++;
+                    chapterInfoEntity.setRole("旁白");
+
+                    chapterInfoEntities.add(chapterInfoEntity);
+
+                }
+
+                splitIndex++;
             }
 
             paragraphIndex++;
