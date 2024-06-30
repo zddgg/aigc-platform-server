@@ -60,7 +60,8 @@ public class BTextChapterServiceImpl implements BTextChapterService {
 
     public BTextChapterServiceImpl(AiService aiService,
                                    ATextRoleService aTextRoleService,
-                                   ATextChapterService aTextChapterService, ATextProjectService aTextProjectService,
+                                   ATextChapterService aTextChapterService,
+                                   ATextProjectService aTextProjectService,
                                    AChapterInfoService aChapterInfoService,
                                    ARoleInferenceService aRoleInferenceService,
                                    ATextCommonRoleService aTextCommonRoleService,
