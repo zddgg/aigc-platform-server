@@ -126,14 +126,17 @@ public class BTextChapterServiceImpl implements BTextChapterService {
             List<String> dialoguePatterns = StringUtils.isBlank(dialoguePattern) ? List.of() : List.of(dialoguePattern);
 
             for (String line : textContent.split("\n")) {
-                List<Tuple2<String, Boolean>> chapterInfoTuple2s = ChapterUtils.dialogueSplit(line, dialoguePatterns);
+                List<Tuple2<Boolean, List<String>>> chapterInfoTuple2s = ChapterUtils.dialogueSplit(line, dialoguePatterns);
 
-                for (Tuple2<String, Boolean> chapterInfoTuple2 : chapterInfoTuple2s) {
-                    if (Objects.equals(chapterInfoTuple2._2, Boolean.TRUE)) {
-                        ChapterInfoEntity chapterInfoEntity = new ChapterInfoEntity();
-                        chapterInfoEntity.setText(chapterInfoTuple2._1);
-                        chapterInfoEntities.add(chapterInfoEntity);
+                for (Tuple2<Boolean, List<String>> chapterInfoTuple2 : chapterInfoTuple2s) {
 
+                    for (int i = 0; i < chapterInfoTuple2._2.size(); i++) {
+
+                        if (Objects.equals(chapterInfoTuple2._1, Boolean.TRUE)) {
+                            ChapterInfoEntity chapterInfoEntity = new ChapterInfoEntity();
+                            chapterInfoEntity.setText(chapterInfoTuple2._2.get(i));
+                            chapterInfoEntities.add(chapterInfoEntity);
+                        }
                     }
                 }
             }
@@ -160,23 +163,28 @@ public class BTextChapterServiceImpl implements BTextChapterService {
             int paragraphIndex = 0;
 
             for (String line : textContent.split("\n")) {
-                List<Tuple2<String, Boolean>> chapterInfoTuple2s = ChapterUtils.dialogueSplit(line, dialoguePatterns);
-                int sentenceIndex = 0;
+                int splitIndex = 0;
 
-                for (Tuple2<String, Boolean> chapterInfoTuple2 : chapterInfoTuple2s) {
-                    ChapterInfoEntity chapterInfoEntity = new ChapterInfoEntity();
-                    chapterInfoEntity.setProjectId(projectId);
-                    chapterInfoEntity.setChapterId(chapterId);
-                    chapterInfoEntity.setParagraphIndex(paragraphIndex);
-                    chapterInfoEntity.setSentenceIndex(sentenceIndex);
-                    chapterInfoEntity.setText(chapterInfoTuple2._1);
-                    chapterInfoEntity.setDialogueFlag(chapterInfoTuple2._2);
+                List<Tuple2<Boolean, List<String>>> chapterInfoTuple2s = ChapterUtils.dialogueSplit(line, dialoguePatterns);
 
-                    chapterInfoEntity.setRole("旁白");
+                for (Tuple2<Boolean, List<String>> chapterInfoTuple2 : chapterInfoTuple2s) {
 
-                    chapterInfoEntities.add(chapterInfoEntity);
+                    for (int i = 0; i < chapterInfoTuple2._2.size(); i++) {
+                        ChapterInfoEntity chapterInfoEntity = new ChapterInfoEntity();
+                        chapterInfoEntity.setProjectId(projectId);
+                        chapterInfoEntity.setChapterId(chapterId);
+                        chapterInfoEntity.setParagraphIndex(paragraphIndex);
+                        chapterInfoEntity.setSplitIndex(splitIndex);
+                        chapterInfoEntity.setSentenceIndex(i);
+                        chapterInfoEntity.setText(chapterInfoTuple2._2.get(i));
+                        chapterInfoEntity.setDialogueFlag(chapterInfoTuple2._1);
 
-                    sentenceIndex++;
+                        chapterInfoEntity.setRole("旁白");
+
+                        chapterInfoEntities.add(chapterInfoEntity);
+                    }
+
+                    splitIndex++;
                 }
 
                 paragraphIndex++;
@@ -225,14 +233,38 @@ public class BTextChapterServiceImpl implements BTextChapterService {
         List<ChapterInfoEntity> chapterInfos = aChapterInfoService.list(projectId, chapterId);
 
         List<JSONObject> linesList = new ArrayList<>();
-        chapterInfos.forEach(lineInfo -> {
-            if (Objects.equals(lineInfo.getDialogueFlag(), Boolean.TRUE)) {
-                JSONObject lines = new JSONObject();
-                lines.put("index", lineInfo.getIndex());
-                lines.put("lines", lineInfo.getText());
-                linesList.add(lines);
-            }
-        });
+
+        Map<Integer, Map<Integer, List<ChapterInfoEntity>>> groups = chapterInfos
+                .stream()
+                .filter(v -> Objects.equals(v.getDialogueFlag(), Boolean.TRUE))
+                .collect(Collectors.groupingBy(
+                        ChapterInfoEntity::getParagraphIndex,
+                        TreeMap::new,
+                        Collectors.groupingBy(
+                                ChapterInfoEntity::getSplitIndex,
+                                TreeMap::new,
+                                Collectors.toList()
+                        )
+                ));
+
+        groups.forEach((_, value1) -> value1.forEach((_, value) -> {
+            List<ChapterInfoEntity> entities = value.stream()
+                    .sorted(Comparator.comparingInt(ChapterInfoEntity::getSentenceIndex))
+                    .toList();
+            String index = entities
+                    .stream()
+                    .map(ChapterInfoEntity::getSecondIndex)
+                    .distinct()
+                    .collect(Collectors.joining(","));
+            String text = entities
+                    .stream()
+                    .map(ChapterInfoEntity::getText)
+                    .collect(Collectors.joining());
+            JSONObject lines = new JSONObject();
+            lines.put("index", index);
+            lines.put("lines", text);
+            linesList.add(lines);
+        }));
 
         if (CollectionUtils.isEmpty(linesList)) {
             return Flux.empty();
@@ -245,7 +277,8 @@ public class BTextChapterServiceImpl implements BTextChapterService {
                 .collect(Collectors.groupingBy(ChapterInfoEntity::getParagraphIndex, TreeMap::new, Collectors.toList()))
                 .values()
                 .forEach(val -> {
-                    val.stream().sorted(Comparator.comparingInt(ChapterInfoEntity::getSentenceIndex))
+                    val.stream().sorted(Comparator.comparingInt(ChapterInfoEntity::getSplitIndex)
+                                    .thenComparingInt(ChapterInfoEntity::getSentenceIndex))
                             .map(ChapterInfoEntity::getText)
                             .forEach(content::append);
                     content.append("\n");
@@ -353,9 +386,9 @@ public class BTextChapterServiceImpl implements BTextChapterService {
                     .findFirst();
 
             List<ChapterInfoEntity> saveInfos = chapterInfoEntities.stream()
-                    .filter(c -> roleInferenceEntityMap.containsKey(c.getIndex()))
+                    .filter(c -> roleInferenceEntityMap.containsKey(c.getSecondIndex()))
                     .peek(c -> {
-                        RoleInferenceEntity roleInferenceEntity = roleInferenceEntityMap.get(c.getIndex());
+                        RoleInferenceEntity roleInferenceEntity = roleInferenceEntityMap.get(c.getSecondIndex());
                         c.setRole(roleInferenceEntity.getRole());
 
                         if (commonRoleMap.containsKey(roleInferenceEntity.getRole())) {
@@ -773,7 +806,7 @@ public class BTextChapterServiceImpl implements BTextChapterService {
             List<Integer> audioModelResetIds = new ArrayList<>();
             boolean hasAside = false;
             for (ChapterInfoEntity chapterInfo : chapterInfos) {
-                String key = chapterInfo.getParagraphIndex() + "-" + chapterInfo.getSentenceIndex();
+                String key = chapterInfo.getSecondIndex();
                 String role = "旁白";
                 if (linesMappingMap.containsKey(key)) {
                     AiResult.LinesMapping linesMapping = linesMappingMap.get(key);
