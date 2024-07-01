@@ -958,8 +958,6 @@ public class BTextChapterServiceImpl implements BTextChapterService {
                 {
                   "linesIndex": "这里的值是台词前的序号",
                   "role": "这里是具体的角色名",
-                  "gender": "男",
-                  "ageGroup": "青年",
                   "mood": "自卑"
                 }
               ]
