@@ -22,6 +22,7 @@ import space.wenliang.ai.aigcplatformserver.socket.AudioProcessWebSocketHandler;
 import space.wenliang.ai.aigcplatformserver.socket.GlobalWebSocketHandler;
 import space.wenliang.ai.aigcplatformserver.util.FileUtils;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -186,14 +187,16 @@ public class BChapterInfoServiceImpl implements BChapterInfoService {
                     if (StringUtils.equals(e.getAudioModelType(), ModelTypeEnum.edge_tts.getName())) {
                         e.setEdgeTtsConfig(edgeTtsConfigEntityMap.get(e.getAudioConfigId()));
                     }
-                    if (Objects.equals(e.getAudioState(), ChapterInfoEntity.created)) {
-                        String audioUrl = pathConfig.buildProjectUrl(
-                                "text",
-                                FileUtils.fileNameFormat(textProject.getProjectName()),
-                                FileUtils.fileNameFormat(textChapter.getChapterName()),
-                                "audio",
-                                e.getIndex() + ".wav");
-                        e.setAudioUrl(audioUrl);
+
+                    String[] dir = {
+                            "text",
+                            FileUtils.fileNameFormat(textProject.getProjectName()),
+                            FileUtils.fileNameFormat(textChapter.getChapterName()),
+                            "audio",
+                            e.getIndex() + ".wav"
+                    };
+                    if (Files.exists(pathConfig.buildProjectPath(dir))) {
+                        e.setAudioUrl(pathConfig.buildProjectUrl(dir));
                     }
 
                 })
