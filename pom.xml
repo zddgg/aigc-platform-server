@@ -243,6 +243,20 @@
                 <db.type>sqlite</db.type>
             </properties>
         </profile>
+
+        <profile>
+            <id>docker</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+                <property>
+                    <name>docker</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <build>
+                <finalName>${project.artifactId}</finalName>
+            </build>
+        </profile>
     </profiles>
 
 </project>
