@@ -10,9 +10,9 @@ public interface ATextRoleService extends IService<TextRoleEntity> {
 
     List<TextRoleEntity> list(String projectId, String chapterId);
 
-    void delete(String projectId, String chapterId);
+    void deleteByChapterId(String chapterId);
 
-    void delete(String projectId);
+    void deleteByProjectId(String projectId);
 
     Map<String, Long> chapterGroupCount();
 }

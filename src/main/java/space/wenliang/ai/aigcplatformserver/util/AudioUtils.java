@@ -8,8 +8,11 @@ import space.wenliang.ai.aigcplatformserver.entity.ChapterInfoEntity;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.Buffer;
 import java.nio.ShortBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 
@@ -97,12 +100,41 @@ public class AudioUtils {
     }
 
     private static void filterProcess(ChapterInfoEntity chapterInfo) throws Exception {
+        ByteArrayInputStream inputStream = new ByteArrayInputStream(Files.readAllBytes(Path.of(chapterInfo.getAudioPath())));
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
-        try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(chapterInfo.getAudioPath())) {
+        audioFrame(inputStream, outputStream, chapterInfo.getAudioSpeed(), chapterInfo.getAudioVolume());
+
+        chapterInfo.setAudioBytes(outputStream.toByteArray());
+    }
+
+    private static void recordAudio(FFmpegFrameGrabber grabber, FFmpegFrameRecorder recorder) throws Exception {
+        Frame frame;
+        while ((frame = grabber.grabFrame()) != null) {
+            recorder.record(frame);
+        }
+    }
+
+    private static void recordSilence(FFmpegFrameRecorder recorder, int sampleRate, int audioChannels, int durationMs) throws Exception {
+        int numSamples = (int) ((sampleRate * durationMs) / 1000.0);
+        short[] silentBuffer = new short[numSamples * audioChannels];
+        ShortBuffer buffer = ShortBuffer.wrap(silentBuffer);
+
+        try (Frame silenceFrame = new Frame()) {
+            silenceFrame.sampleRate = sampleRate;
+            silenceFrame.audioChannels = audioChannels;
+            silenceFrame.samples = new Buffer[]{buffer};
+
+            recorder.recordSamples(sampleRate, audioChannels, buffer);
+        }
+    }
+
+    public static void audioFrame(InputStream in, OutputStream out, Double audioSpeed, Double audioVolume) throws Exception {
+        FFmpegLogCallback.set();
+        try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(in)) {
             grabber.start();
 
-            try (FFmpegFrameRecorder recorder = new FFmpegFrameRecorder(outputStream, grabber.getAudioChannels())) {
+            try (FFmpegFrameRecorder recorder = new FFmpegFrameRecorder(out, grabber.getAudioChannels())) {
                 recorder.setAudioCodec(grabber.getAudioCodec());
                 recorder.setSampleRate(grabber.getSampleRate());
                 recorder.setAudioChannels(grabber.getAudioChannels());
@@ -110,7 +142,7 @@ public class AudioUtils {
                 recorder.setFormat("wav");
                 recorder.start();
 
-                String filterString = String.format("atempo=%.1f,volume=%.1f", chapterInfo.getAudioSpeed(), chapterInfo.getAudioVolume());
+                String filterString = String.format("atempo=%.1f,volume=%.1f", audioSpeed, audioVolume);
 
                 try (FFmpegFrameFilter filter = new FFmpegFrameFilter(filterString, grabber.getAudioChannels())) {
                     filter.setSampleRate(grabber.getSampleRate());
@@ -132,29 +164,6 @@ public class AudioUtils {
             }
 
             grabber.stop();
-
-            chapterInfo.setAudioBytes(outputStream.toByteArray());
-        }
-    }
-
-    private static void recordAudio(FFmpegFrameGrabber grabber, FFmpegFrameRecorder recorder) throws Exception {
-        Frame frame;
-        while ((frame = grabber.grabFrame()) != null) {
-            recorder.record(frame);
-        }
-    }
-
-    private static void recordSilence(FFmpegFrameRecorder recorder, int sampleRate, int audioChannels, int durationMs) throws Exception {
-        int numSamples = (int) ((sampleRate * durationMs) / 1000.0);
-        short[] silentBuffer = new short[numSamples * audioChannels];
-        ShortBuffer buffer = ShortBuffer.wrap(silentBuffer);
-
-        try (Frame silenceFrame = new Frame()) {
-            silenceFrame.sampleRate = sampleRate;
-            silenceFrame.audioChannels = audioChannels;
-            silenceFrame.samples = new Buffer[]{buffer};
-
-            recorder.recordSamples(sampleRate, audioChannels, buffer);
         }
     }
 }

@@ -27,4 +27,6 @@ public interface BChapterInfoService {
     Tuple2<Integer, List<String>> startCreateAudio(String projectId, String chapterId, String actionType);
 
     void stopCreateAudio();
+
+    void deleteChapterInfo(ChapterInfoEntity chapterInfoEntity);
 }

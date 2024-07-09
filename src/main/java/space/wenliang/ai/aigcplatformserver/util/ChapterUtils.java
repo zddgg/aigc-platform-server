@@ -18,6 +18,10 @@ import java.util.stream.Collectors;
 
 public class ChapterUtils {
 
+    private static final int MAX_CHARS_PER_LINE = 37;
+    private static final int MIN_CHARS_PER_LINE = MAX_CHARS_PER_LINE / 3;
+    private static final String PUNCTUATION = "，。！？；：,.!?;:";
+
     public static List<Tuple2<String, String>> chapterSplit(byte[] bytes, String chapterTitlePattern) throws IOException {
         List<Tuple2<String, String>> chapters = new ArrayList<>();
         StringBuilder preface = new StringBuilder();
@@ -116,11 +120,6 @@ public class ChapterUtils {
                 .collect(Collectors.joining("|"));
         return Pattern.compile(patternStr);
     }
-
-
-    private static final int MAX_CHARS_PER_LINE = 37;
-    private static final int MIN_CHARS_PER_LINE = MAX_CHARS_PER_LINE / 3;
-    private static final String PUNCTUATION = "，。！？；：,.!?;:";
 
     public static List<String> textLenFormat(String text) {
         List<String> result = new ArrayList<>();

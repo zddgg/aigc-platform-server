@@ -13,7 +13,7 @@ public interface AChapterInfoService extends IService<ChapterInfoEntity> {
 
     void deleteByProjectId(String projectId);
 
-    void deleteByProjectIdAndChapterId(String projectId, String chapterId);
+    void deleteByChapterId(String chapterId);
 
     void updateAudioStage(Integer id, int created);
 

@@ -1,6 +1,7 @@
 package space.wenliang.ai.aigcplatformserver.service.business.impl;
 
 import io.vavr.Tuple2;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.BeanUtils;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+@Slf4j
 @Service
 public class BTextProjectServiceImpl implements BTextProjectService {
 
@@ -49,6 +51,23 @@ public class BTextProjectServiceImpl implements BTextProjectService {
         this.aTextRoleService = aTextRoleService;
         this.aTextCommonRoleService = aTextCommonRoleService;
         this.aRoleInferenceService = aRoleInferenceService;
+    }
+
+    private static @NotNull List<TextChapterEntity> getTextChapterEntities(String projectId,
+                                                                           List<Tuple2<String, String>> tuple2s,
+                                                                           String dialoguePattern) {
+        List<TextChapterEntity> textChapterEntities = new ArrayList<>();
+        for (Tuple2<String, String> tuple2 : tuple2s) {
+            TextChapterEntity textChapterEntity = new TextChapterEntity();
+            textChapterEntity.setProjectId(projectId);
+            textChapterEntity.setChapterId(IdUtils.uuid());
+            textChapterEntity.setChapterName(tuple2._1);
+            textChapterEntity.setContent(tuple2._2);
+            textChapterEntity.setDialoguePattern(dialoguePattern);
+
+            textChapterEntities.add(textChapterEntity);
+        }
+        return textChapterEntities;
     }
 
     @Override
@@ -134,7 +153,7 @@ public class BTextProjectServiceImpl implements BTextProjectService {
 
             List<TextChapterEntity> textChapterEntities = getTextChapterEntities(projectId, tuple2s, dialoguePattern);
 
-            aTextChapterService.delete(projectId);
+            aTextChapterService.deleteByProjectId(projectId);
             aTextChapterService.saveBatch(textChapterEntities);
         }
 
@@ -156,33 +175,20 @@ public class BTextProjectServiceImpl implements BTextProjectService {
     public void delete(TextProjectEntity textProjectEntity) throws IOException {
         TextProjectEntity project = aTextProjectService.getOne(textProjectEntity.getProjectId());
         if (Objects.isNull(project)) {
-            throw new BizException("项目不存在");
+            log.error("text project is null");
         }
 
-        aChapterInfoService.deleteByProjectId(project.getProjectId());
-        aTextChapterService.delete(project.getProjectId());
-        aTextProjectService.deleteByProjectId(project.getProjectId());
-        aTextRoleService.delete(project.getProjectId());
-        aTextCommonRoleService.deleteByProjectId(project.getProjectId());
-        aRoleInferenceService.delete(project.getProjectId());
+        aChapterInfoService.deleteByProjectId(textProjectEntity.getProjectId());
+        aTextChapterService.deleteByProjectId(textProjectEntity.getProjectId());
+        aTextProjectService.deleteByProjectId(textProjectEntity.getProjectId());
+        aTextRoleService.deleteByProjectId(textProjectEntity.getProjectId());
+        aTextCommonRoleService.deleteByProjectId(textProjectEntity.getProjectId());
+        aRoleInferenceService.deleteByProjectId(textProjectEntity.getProjectId());
 
-        FileUtils.deleteDirectoryAll(Path.of(pathConfig.getProjectDir(), "text", project.getProjectId()));
-    }
-
-    private static @NotNull List<TextChapterEntity> getTextChapterEntities(String projectId,
-                                                                           List<Tuple2<String, String>> tuple2s,
-                                                                           String dialoguePattern) {
-        List<TextChapterEntity> textChapterEntities = new ArrayList<>();
-        for (Tuple2<String, String> tuple2 : tuple2s) {
-            TextChapterEntity textChapterEntity = new TextChapterEntity();
-            textChapterEntity.setProjectId(projectId);
-            textChapterEntity.setChapterId(IdUtils.uuid());
-            textChapterEntity.setChapterName(tuple2._1);
-            textChapterEntity.setContent(tuple2._2);
-            textChapterEntity.setDialoguePattern(dialoguePattern);
-
-            textChapterEntities.add(textChapterEntity);
-        }
-        return textChapterEntities;
+        FileUtils.deleteDirectoryAll(Path.of(
+                pathConfig.getProjectDir(),
+                "text",
+                FileUtils.fileNameFormat(textProjectEntity.getProjectName())
+        ));
     }
 }
