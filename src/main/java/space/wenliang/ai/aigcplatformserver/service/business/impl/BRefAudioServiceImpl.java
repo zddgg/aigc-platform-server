@@ -38,6 +38,96 @@ public class BRefAudioServiceImpl implements BRefAudioService {
         this.aEdgeTtsConfigService = aEdgeTtsConfigService;
     }
 
+    public static List<RefAudioEntity> buildLocalRefAudios(Path refAudioPath) throws IOException {
+        Map<String, String> refAudioAvatarMap = new HashMap<>();
+        Map<String, String> refAudioMoodAvatarMap = new HashMap<>();
+        List<RefAudioEntity> refAudioEntities = new ArrayList<>();
+
+        if (Files.exists(refAudioPath)) {
+            try (Stream<Path> audioGroupPaths = Files.list(refAudioPath)) {
+                audioGroupPaths.forEach(audioGroupPath -> {
+                    String audioGroup = audioGroupPath.getFileName().toString();
+
+                    if (Files.isDirectory(audioGroupPath)) {
+                        try (Stream<Path> audioPaths = Files.list(audioGroupPath)) {
+                            audioPaths.forEach(audioPath -> {
+                                String audioName = audioPath.getFileName().toString();
+
+                                if (Files.isDirectory(audioPath)) {
+                                    try (Stream<Path> moodPaths = Files.list(audioPath)) {
+                                        moodPaths.forEach(moodPath -> {
+                                            String moodName = moodPath.getFileName().toString();
+
+                                            if (Files.isDirectory(moodPath)) {
+                                                try (Stream<Path> moodAudios = Files.list(moodPath)) {
+                                                    moodAudios.forEach(moodAudio -> {
+                                                        if (Files.isRegularFile(moodAudio)) {
+                                                            String moodAudioName = moodAudio.getFileName().toString();
+
+                                                            if (moodAudioName.startsWith("avatar")) {
+                                                                refAudioMoodAvatarMap.put(audioGroup + "-" + audioName + "-" + moodName, moodAudioName);
+                                                            } else if (moodAudioName.endsWith("wav")) {
+                                                                RefAudioEntity refAudioEntity = new RefAudioEntity();
+                                                                refAudioEntity.setAudioGroup(audioGroup);
+                                                                refAudioEntity.setAudioName(audioName);
+                                                                refAudioEntity.setMoodName(moodName);
+                                                                refAudioEntity.setMoodAudioName(moodAudioName);
+                                                                refAudioEntity.setMoodAudioText(FileNameUtil.getPrefix(moodAudioName));
+                                                                refAudioEntities.add(refAudioEntity);
+                                                            }
+                                                        }
+                                                    });
+                                                } catch (IOException e) {
+                                                    throw new RuntimeException(e);
+                                                }
+                                            } else if (Files.isRegularFile(moodPath) && moodName.startsWith("avatar")) {
+                                                refAudioAvatarMap.put(audioGroup + "-" + audioName, moodName);
+                                            }
+                                        });
+                                    } catch (IOException e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                }
+                            });
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                });
+            }
+        }
+
+        return refAudioEntities.stream().peek(refAudioEntity -> {
+            String key1 = refAudioEntity.getAudioGroup() + "-" + refAudioEntity.getAudioName();
+            String key2 = key1 + "-" + refAudioEntity.getMoodName();
+            if (refAudioAvatarMap.containsKey(key1)) {
+                refAudioEntity.setAvatar(refAudioAvatarMap.get(key1));
+            }
+            if (refAudioMoodAvatarMap.containsKey(key2)) {
+                refAudioEntity.setMoodAvatar(refAudioMoodAvatarMap.get(key2));
+            }
+        }).toList();
+    }
+
+    public static String convertEtGender(String gender) {
+        return switch (gender) {
+            case "Male" -> "男";
+            case "Female" -> "女";
+            default -> gender;
+        };
+    }
+
+    public static String convertEtLanguage(String language) {
+        String lang = language.substring(0, language.indexOf("-"));
+        return switch (lang) {
+            case "zh" -> "中文";
+            case "en" -> "英文";
+            case "ja" -> "日文";
+            case "ko" -> "韩文";
+            default -> lang;
+        };
+    }
+
     @Override
     public List<RefAudio> refAudioList() {
         List<String> refAudioSorts = queryGroupSorts()
@@ -201,77 +291,6 @@ public class BRefAudioServiceImpl implements BRefAudioService {
         }
     }
 
-    public static List<RefAudioEntity> buildLocalRefAudios(Path refAudioPath) throws IOException {
-        Map<String, String> refAudioAvatarMap = new HashMap<>();
-        Map<String, String> refAudioMoodAvatarMap = new HashMap<>();
-        List<RefAudioEntity> refAudioEntities = new ArrayList<>();
-
-        if (Files.exists(refAudioPath)) {
-            try (Stream<Path> audioGroupPaths = Files.list(refAudioPath)) {
-                audioGroupPaths.forEach(audioGroupPath -> {
-                    String audioGroup = audioGroupPath.getFileName().toString();
-
-                    if (Files.isDirectory(audioGroupPath)) {
-                        try (Stream<Path> audioPaths = Files.list(audioGroupPath)) {
-                            audioPaths.forEach(audioPath -> {
-                                String audioName = audioPath.getFileName().toString();
-
-                                if (Files.isDirectory(audioPath)) {
-                                    try (Stream<Path> moodPaths = Files.list(audioPath)) {
-                                        moodPaths.forEach(moodPath -> {
-                                            String moodName = moodPath.getFileName().toString();
-
-                                            if (Files.isDirectory(moodPath)) {
-                                                try (Stream<Path> moodAudios = Files.list(moodPath)) {
-                                                    moodAudios.forEach(moodAudio -> {
-                                                        if (Files.isRegularFile(moodAudio)) {
-                                                            String moodAudioName = moodAudio.getFileName().toString();
-
-                                                            if (moodAudioName.startsWith("avatar")) {
-                                                                refAudioMoodAvatarMap.put(audioGroup + "-" + audioName + "-" + moodName, moodAudioName);
-                                                            } else if (moodAudioName.endsWith("wav")) {
-                                                                RefAudioEntity refAudioEntity = new RefAudioEntity();
-                                                                refAudioEntity.setAudioGroup(audioGroup);
-                                                                refAudioEntity.setAudioName(audioName);
-                                                                refAudioEntity.setMoodName(moodName);
-                                                                refAudioEntity.setMoodAudioName(moodAudioName);
-                                                                refAudioEntity.setMoodAudioText(FileNameUtil.getPrefix(moodAudioName));
-                                                                refAudioEntities.add(refAudioEntity);
-                                                            }
-                                                        }
-                                                    });
-                                                } catch (IOException e) {
-                                                    throw new RuntimeException(e);
-                                                }
-                                            } else if (Files.isRegularFile(moodPath) && moodName.startsWith("avatar")) {
-                                                refAudioAvatarMap.put(audioGroup + "-" + audioName, moodName);
-                                            }
-                                        });
-                                    } catch (IOException e) {
-                                        throw new RuntimeException(e);
-                                    }
-                                }
-                            });
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-                });
-            }
-        }
-
-        return refAudioEntities.stream().peek(refAudioEntity -> {
-            String key1 = refAudioEntity.getAudioGroup() + "-" + refAudioEntity.getAudioName();
-            String key2 = key1 + "-" + refAudioEntity.getMoodName();
-            if (refAudioAvatarMap.containsKey(key1)) {
-                refAudioEntity.setAvatar(refAudioAvatarMap.get(key1));
-            }
-            if (refAudioMoodAvatarMap.containsKey(key2)) {
-                refAudioEntity.setMoodAvatar(refAudioMoodAvatarMap.get(key2));
-            }
-        }).toList();
-    }
-
     public List<RefAudioEntity> mergeAudioConfigs(List<RefAudioEntity> localRefAudios, List<RefAudioEntity> cacheRefAudioConfigs) throws IOException {
         Map<String, RefAudioEntity> refAudioMap = new HashMap<>();
 
@@ -326,24 +345,5 @@ public class BRefAudioServiceImpl implements BRefAudioService {
         }
 
         return localRefAudios;
-    }
-
-    public static String convertEtGender(String gender) {
-        return switch (gender) {
-            case "Male" -> "男";
-            case "Female" -> "女";
-            default -> gender;
-        };
-    }
-
-    public static String convertEtLanguage(String language) {
-        String lang = language.substring(0, language.indexOf("-"));
-        return switch (lang) {
-            case "zh" -> "中文";
-            case "en" -> "英文";
-            case "ja" -> "日文";
-            case "ko" -> "韩文";
-            default -> lang;
-        };
     }
 }

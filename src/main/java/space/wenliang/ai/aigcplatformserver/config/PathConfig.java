@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 @Configuration
 public class PathConfig {
 
+    private final Environment env;
     @Value("${remote.enable:false}")
     private Boolean remoteEnable;
     @Value("${remote.platform}")
@@ -27,9 +28,6 @@ public class PathConfig {
     private String remoteModelDir;
     @Value("${server.domain:}")
     private String serverDomain;
-
-    private final Environment env;
-
     private String modelDir;
     private String projectDir;
 
@@ -38,6 +36,13 @@ public class PathConfig {
 
     public PathConfig(Environment env) {
         this.env = env;
+    }
+
+    public static String urlEncode(List<String> path) {
+        return path.stream()
+                .map(s -> URLEncoder.encode(s, StandardCharsets.UTF_8))
+                .map(s -> s.replace("+", "%20"))
+                .collect(Collectors.joining("/"));
     }
 
     @PostConstruct
@@ -93,12 +98,5 @@ public class PathConfig {
 
     public String buildProjectUrl(String... path) {
         return projectUrl + urlEncode(Arrays.asList(path));
-    }
-
-    public static String urlEncode(List<String> path) {
-        return path.stream()
-                .map(s -> URLEncoder.encode(s, StandardCharsets.UTF_8))
-                .map(s -> s.replace("+", "%20"))
-                .collect(Collectors.joining("/"));
     }
 }

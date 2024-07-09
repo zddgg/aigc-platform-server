@@ -107,8 +107,8 @@ public class BChapterInfoServiceImpl implements BChapterInfoService {
 
             List<ChapterInfoEntity> chapterInfoEntities = aChapterInfoService.buildChapterInfos(textChapterEntity);
 
-            aChapterInfoService.deleteByProjectIdAndChapterId(projectId, chapterId);
-            aTextRoleService.delete(projectId, chapterId);
+            aChapterInfoService.deleteByChapterId(chapterId);
+            aTextRoleService.deleteByChapterId(chapterId);
 
             if (!CollectionUtils.isEmpty(chapterInfoEntities)) {
 
@@ -291,6 +291,11 @@ public class BChapterInfoServiceImpl implements BChapterInfoService {
     @Override
     public void stopCreateAudio() {
         audioCreateTaskQueue.clear();
+    }
+
+    @Override
+    public void deleteChapterInfo(ChapterInfoEntity chapterInfoEntity) {
+        aChapterInfoService.removeById(chapterInfoEntity.getId());
     }
 
     public void audioCreateTask() {

@@ -21,14 +21,13 @@ public class ARoleInferenceServiceImpl extends ServiceImpl<RoleInferenceMapper, 
     }
 
     @Override
-    public void delete(String projectId, String chapterId) {
+    public void deleteByChapterId(String chapterId) {
         this.remove(new LambdaQueryWrapper<RoleInferenceEntity>()
-                .eq(RoleInferenceEntity::getProjectId, projectId)
                 .eq(RoleInferenceEntity::getChapterId, chapterId));
     }
 
     @Override
-    public void delete(String projectId) {
+    public void deleteByProjectId(String projectId) {
         this.remove(new LambdaQueryWrapper<RoleInferenceEntity>()
                 .eq(RoleInferenceEntity::getProjectId, projectId));
     }

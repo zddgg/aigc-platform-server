@@ -4,8 +4,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import io.vavr.Tuple2;
-import io.vavr.Tuple3;
-import io.vavr.Tuple4;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import space.wenliang.ai.aigcplatformserver.bean.GroupCount;
@@ -45,9 +43,8 @@ public class AChapterInfoServiceImpl extends ServiceImpl<ChapterInfoMapper, Chap
     }
 
     @Override
-    public void deleteByProjectIdAndChapterId(String projectId, String chapterId) {
+    public void deleteByChapterId(String chapterId) {
         this.remove(new LambdaQueryWrapper<ChapterInfoEntity>()
-                .eq(ChapterInfoEntity::getProjectId, projectId)
                 .eq(ChapterInfoEntity::getChapterId, chapterId));
     }
 

@@ -39,6 +39,8 @@ remote:
   platform: unix
   model-dir: /model
 
+application:
+  version: @project.version@
 
 ---
 spring:

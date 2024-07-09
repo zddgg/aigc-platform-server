@@ -9,8 +9,8 @@ public interface ARoleInferenceService extends IService<RoleInferenceEntity> {
 
     List<RoleInferenceEntity> list(String projectId, String chapterId);
 
-    void delete(String projectId, String chapterId);
+    void deleteByChapterId(String chapterId);
 
-    void delete(String projectId);
+    void deleteByProjectId(String projectId);
 
 }

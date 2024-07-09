@@ -1,6 +1,10 @@
+-- liquibase formatted sql
+
+-- changeset wenliang:1
 create table if not exists audio_server_config_entity
 (
-    id          integer primary key autoincrement,
+    id          int auto_increment
+        primary key,
     name        varchar(255) null,
     host        varchar(255) null,
     path        varchar(255) null,
@@ -18,7 +22,8 @@ VALUES ('chat-tts', 'http://127.0.0.1:16863', '/tts', 'v1');
 
 create table if not exists chapter_info_entity
 (
-    id                  integer primary key autoincrement,
+    id                  int auto_increment
+        primary key,
     project_id          varchar(255) null,
     chapter_id          varchar(255) null,
     paragraph_index     int          null,
@@ -42,7 +47,8 @@ create table if not exists chapter_info_entity
 
 create table if not exists chat_model_config_entity
 (
-    id             integer primary key autoincrement,
+    id             int auto_increment
+        primary key,
     name           varchar(255) null,
     interface_type varchar(255) null,
     host           varchar(255) null,
@@ -58,7 +64,8 @@ create table if not exists chat_model_config_entity
 
 create table if not exists chat_model_template_entity
 (
-    id             integer primary key autoincrement,
+    id             int auto_increment
+        primary key,
     template_name  varchar(255) null,
     interface_type varchar(255) null,
     host           varchar(255) null,
@@ -101,7 +108,8 @@ VALUES ('Qwen', 'Qwen', 'https://dashscope.aliyuncs.com', '/api/v1/services/aigc
 
 create table if not exists chat_tts_config_entity
 (
-    id                 integer primary key autoincrement,
+    id                 int auto_increment
+        primary key,
     config_id          varchar(255) null,
     config_name        varchar(255) null,
     temperature        float        null,
@@ -115,7 +123,8 @@ create table if not exists chat_tts_config_entity
 
 create table if not exists edge_tts_config_entity
 (
-    id              integer primary key autoincrement,
+    id              int auto_increment
+        primary key,
     config_id       varchar(255) null,
     name            varchar(255) null,
     short_name      varchar(255) null,
@@ -1910,7 +1919,8 @@ VALUES ('zu-ZA-ThembaNeural', 'Microsoft Server Speech Text to Speech Voice (zu-
 
 create table if not exists edge_tts_setting_entity
 (
-    id        integer primary key autoincrement,
+    id        int auto_increment
+        primary key,
     en_name   varchar(255) null,
     zh_name   varchar(255) null,
     text      varchar(255) null,
@@ -1928,7 +1938,8 @@ VALUES ('ko', '韩文', '안녕하세요! 오늘도 활기찬 하루입니다!',
 
 create table if not exists fish_speech_config_entity
 (
-    id                 integer primary key autoincrement,
+    id                 int auto_increment
+        primary key,
     config_id          varchar(255) null,
     config_name        varchar(255) null,
     temperature        float        null,
@@ -1940,7 +1951,8 @@ create table if not exists fish_speech_config_entity
 
 create table if not exists fish_speech_model_entity
 (
-    id          integer primary key autoincrement,
+    id          int auto_increment
+        primary key,
     model_id    varchar(255) null,
     model_group varchar(512) null,
     model_name  varchar(512) null,
@@ -1950,7 +1962,8 @@ create table if not exists fish_speech_model_entity
 
 create table if not exists gpt_sovits_config_entity
 (
-    id                 integer primary key autoincrement,
+    id                 int auto_increment
+        primary key,
     config_id          varchar(255) null,
     config_name        varchar(255) null,
     temperature        float        null,
@@ -1970,7 +1983,8 @@ create table if not exists gpt_sovits_config_entity
 
 create table if not exists gpt_sovits_model_entity
 (
-    id          integer primary key autoincrement,
+    id          int auto_increment
+        primary key,
     model_id    varchar(255) null,
     model_group varchar(512) null,
     model_name  varchar(512) null,
@@ -1980,7 +1994,8 @@ create table if not exists gpt_sovits_model_entity
 
 create table if not exists ref_audio_entity
 (
-    id               integer primary key autoincrement,
+    id               int auto_increment
+        primary key,
     ref_audio_id     varchar(255) null,
     audio_group      varchar(255) null,
     group_sort_order int          null,
@@ -2001,7 +2016,8 @@ create table if not exists ref_audio_entity
 
 create table if not exists role_inference_entity
 (
-    id         integer primary key autoincrement,
+    id         int auto_increment
+        primary key,
     project_id varchar(255) null,
     chapter_id varchar(255) null,
     role       varchar(255) null,
@@ -2013,7 +2029,8 @@ create table if not exists role_inference_entity
 
 create table if not exists text_chapter_entity
 (
-    id               integer primary key autoincrement,
+    id               int auto_increment
+        primary key,
     chapter_id       varchar(255) not null,
     project_id       varchar(255) not null,
     chapter_name     varchar(255) not null,
@@ -2023,7 +2040,8 @@ create table if not exists text_chapter_entity
 
 create table if not exists text_common_role_entity
 (
-    id               integer primary key autoincrement,
+    id               int auto_increment
+        primary key,
     project_id       varchar(255) null,
     role             varchar(255) null,
     gender           varchar(255) null,
@@ -2036,7 +2054,8 @@ create table if not exists text_common_role_entity
 
 create table if not exists text_project_entity
 (
-    id              integer primary key autoincrement,
+    id              int auto_increment
+        primary key,
     project_id      varchar(255) not null,
     project_name    varchar(255) not null,
     project_type    varchar(255) not null,
@@ -2048,7 +2067,8 @@ create table if not exists text_project_entity
 
 create table if not exists text_role_entity
 (
-    id               integer primary key autoincrement,
+    id               int auto_increment
+        primary key,
     project_id       varchar(255) null,
     chapter_id       varchar(255) null,
     role             varchar(255) null,

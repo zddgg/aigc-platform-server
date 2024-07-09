@@ -13,20 +13,16 @@ import org.springframework.util.CollectionUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
 import space.wenliang.ai.aigcplatformserver.ai.chat.AiService;
-import space.wenliang.ai.aigcplatformserver.bean.AiResult;
-import space.wenliang.ai.aigcplatformserver.bean.ChapterExpose;
-import space.wenliang.ai.aigcplatformserver.bean.TextRoleChange;
+import space.wenliang.ai.aigcplatformserver.bean.*;
 import space.wenliang.ai.aigcplatformserver.common.ModelTypeEnum;
+import space.wenliang.ai.aigcplatformserver.common.Page;
 import space.wenliang.ai.aigcplatformserver.config.PathConfig;
 import space.wenliang.ai.aigcplatformserver.entity.*;
 import space.wenliang.ai.aigcplatformserver.exception.BizException;
 import space.wenliang.ai.aigcplatformserver.service.application.*;
 import space.wenliang.ai.aigcplatformserver.service.business.BTextChapterService;
 import space.wenliang.ai.aigcplatformserver.socket.GlobalWebSocketHandler;
-import space.wenliang.ai.aigcplatformserver.util.AudioUtils;
-import space.wenliang.ai.aigcplatformserver.util.ChapterUtils;
-import space.wenliang.ai.aigcplatformserver.util.FileUtils;
-import space.wenliang.ai.aigcplatformserver.util.SubtitleUtils;
+import space.wenliang.ai.aigcplatformserver.util.*;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -40,6 +36,36 @@ import java.util.stream.Collectors;
 @Service
 public class BTextChapterServiceImpl implements BTextChapterService {
 
+    static String parseStep = """
+            1. 分析下面原文中有哪些角色，角色中有观众、群众之类的角色时统一使用观众这个角色，他们的性别和年龄段只能在下面范围中选择一个：
+            性别：男、女、未知。
+            年龄段：少年、青年、中年、老年、未知。
+
+            2. 请分析下面台词部分的内容是属于原文部分中哪个角色的，然后结合上下文分析当时的情绪，情绪只能在下面范围中选择一个：
+            情绪：中立、开心、吃惊、难过、厌恶、生气、恐惧。
+
+            3. 严格按照台词文本中的顺序在原文文本中查找。每行台词都做一次处理，不能合并台词。
+            4. 返回结果是JSON数组结构的字符串。
+            5. 分析的台词内容如果不是台词，不要加入到返回结果中。
+            """;
+    static String outputFormat = """
+            {
+              "roles": [
+                {
+                  "role": "这里是具体的角色名",
+                  "gender": "男",
+                  "ageGroup": "青年"
+                }
+              ],
+              "linesMappings": [
+                {
+                  "linesIndex": "这里的值是台词前的序号",
+                  "role": "这里是具体的角色名",
+                  "mood": "自卑"
+                }
+              ]
+            }
+            """;
     private final AiService aiService;
     private final ATextRoleService aTextRoleService;
     private final ATextChapterService aTextChapterService;
@@ -47,7 +73,6 @@ public class BTextChapterServiceImpl implements BTextChapterService {
     private final AChapterInfoService aChapterInfoService;
     private final ARoleInferenceService aRoleInferenceService;
     private final ATextCommonRoleService aTextCommonRoleService;
-
     private final ARefAudioService aRefAudioService;
     private final AGptSovitsModelService aGptSovitsModelService;
     private final AGptSovitsConfigService aGptSovitsConfigService;
@@ -93,14 +118,19 @@ public class BTextChapterServiceImpl implements BTextChapterService {
     }
 
     @Override
-    public List<TextChapterEntity> chapters(String projectId) {
-        List<TextChapterEntity> chapterEntities = aTextChapterService.list(projectId);
-        if (!CollectionUtils.isEmpty(chapterEntities)) {
+    public Page<TextChapterEntity> pageChapters(ProjectQuery projectQuery) {
+        Page<TextChapterEntity> page = aTextChapterService.page(
+                Page.of(projectQuery.getCurrent(), projectQuery.getPageSize()),
+                new LambdaQueryWrapper<TextChapterEntity>()
+                        .eq(TextChapterEntity::getProjectId, projectQuery.getProjectId())
+                        .orderByAsc(TextChapterEntity::getSortOrder, TextChapterEntity::getId));
+        if (!CollectionUtils.isEmpty(page.getRecords())) {
+
             Map<String, Long> chapterTextCount = aChapterInfoService.chapterGroupCount();
             Map<String, Boolean> chapterExportCount = aChapterInfoService.chapterExportCount();
             Map<String, Long> chapterRoleCount = aTextRoleService.chapterGroupCount();
 
-            chapterEntities = chapterEntities.stream()
+            List<TextChapterEntity> list = page.getRecords().stream()
                     .peek(t -> {
                         t.setTextNum(chapterTextCount.get(t.getChapterId()));
                         t.setRoleNum(chapterRoleCount.get(t.getChapterId()));
@@ -112,32 +142,42 @@ public class BTextChapterServiceImpl implements BTextChapterService {
                         }
                     })
                     .toList();
+
+            page.setRecords(list);
         }
-        return chapterEntities;
+        return page;
     }
 
     @Override
-    public List<ChapterInfoEntity> tmpDialogueParse(String projectId,
-                                                    String chapterId,
-                                                    String dialoguePattern,
-                                                    String textContent) {
+    public List<TextChapterEntity> chapters4Sort(String projectId) {
+        return aTextChapterService.list(new LambdaQueryWrapper<TextChapterEntity>()
+                        .select(TextChapterEntity.class, entityClass -> !entityClass.getColumn().equals("content"))
+                        .eq(TextChapterEntity::getProjectId, projectId)
+                        .orderByAsc(TextChapterEntity::getSortOrder, TextChapterEntity::getId))
+                .stream()
+                .toList();
+    }
+
+    @Override
+    public List<ChapterInfoEntity> tmpDialogueParse(TextChapterEntity textChapter) {
         List<ChapterInfoEntity> chapterInfoEntities = new ArrayList<>();
 
-        if (StringUtils.isNotBlank(textContent)) {
-            List<String> dialoguePatterns = StringUtils.isBlank(dialoguePattern) ? List.of() : List.of(dialoguePattern);
+        if (StringUtils.isNotBlank(textChapter.getContent())) {
+            List<String> dialoguePatterns = StringUtils.isBlank(textChapter.getDialoguePattern())
+                    ? List.of()
+                    : List.of(textChapter.getDialoguePattern());
 
-            for (String line : textContent.split("\n")) {
+            for (String line : textChapter.getContent().split("\n")) {
                 List<Tuple2<Boolean, List<String>>> chapterInfoTuple2s = ChapterUtils.dialogueSplit(line, dialoguePatterns);
 
                 for (Tuple2<Boolean, List<String>> chapterInfoTuple2 : chapterInfoTuple2s) {
 
                     for (int i = 0; i < chapterInfoTuple2._2.size(); i++) {
 
-                        if (Objects.equals(chapterInfoTuple2._1, Boolean.TRUE)) {
-                            ChapterInfoEntity chapterInfoEntity = new ChapterInfoEntity();
-                            chapterInfoEntity.setText(chapterInfoTuple2._2.get(i));
-                            chapterInfoEntities.add(chapterInfoEntity);
-                        }
+                        ChapterInfoEntity chapterInfoEntity = new ChapterInfoEntity();
+                        chapterInfoEntity.setText(chapterInfoTuple2._2.get(i));
+                        chapterInfoEntity.setDialogueFlag(chapterInfoTuple2._1);
+                        chapterInfoEntities.add(chapterInfoEntity);
                     }
                 }
             }
@@ -147,84 +187,150 @@ public class BTextChapterServiceImpl implements BTextChapterService {
     }
 
     @Override
-    public void dialogueParse(String projectId,
-                              String chapterId,
-                              String dialoguePattern,
-                              String textContent) {
+    public void chapterEdit(TextChapterEntity textChapter) {
+
+        String projectId = textChapter.getProjectId();
+        String chapterId = textChapter.getChapterId();
+
         TextChapterEntity entity = aTextChapterService.getOne(projectId, chapterId);
-        if (Objects.isNull(entity)) {
-            throw new BizException("章节不存在");
+
+        if (Objects.nonNull(entity) && StringUtils.isNotBlank(textChapter.getContent())) {
+
+            saveChapterInfoEntities(textChapter);
+
+            entity.setChapterName(textChapter.getChapterName());
+            entity.setContent(textChapter.getContent());
+            entity.setDialoguePattern(textChapter.getDialoguePattern());
+            aTextChapterService.updateById(entity);
+        }
+    }
+
+    @Override
+    public void chapterAdd(ChapterAdd chapterAdd) {
+        TextChapterEntity textChapter = chapterAdd.getTextChapter();
+        List<TextChapterEntity> sortChapters = chapterAdd.getSortChapters();
+
+        String projectId = textChapter.getProjectId();
+        String chapterId = IdUtils.uuid();
+
+        textChapter.setChapterId(chapterId);
+
+        if (StringUtils.isNotBlank(textChapter.getContent())) {
+
+            saveChapterInfoEntities(textChapter);
+
+
+            TextChapterEntity save = new TextChapterEntity();
+            save.setProjectId(projectId);
+            save.setChapterId(chapterId);
+            save.setChapterName(textChapter.getChapterName());
+            save.setContent(textChapter.getContent());
+            save.setDialoguePattern(textChapter.getDialoguePattern());
+            save.setSortOrder(Optional.ofNullable(textChapter.getSortOrder()).orElse(0));
+
+            aTextChapterService.save(save);
+
+            if (!CollectionUtils.isEmpty(sortChapters)) {
+                List<TextChapterEntity> saveList = sortChapters.stream().map(t -> {
+                    TextChapterEntity textChapterEntity = new TextChapterEntity();
+                    textChapterEntity.setId(t.getId());
+                    textChapterEntity.setSortOrder(t.getSortOrder());
+                    return textChapterEntity;
+                }).toList();
+                aTextChapterService.updateBatchById(saveList);
+            }
+        }
+    }
+
+    public void saveChapterInfoEntities(TextChapterEntity textChapter) {
+
+        String projectId = textChapter.getProjectId();
+        String chapterId = textChapter.getChapterId();
+        String content = textChapter.getContent();
+        String dialoguePattern = textChapter.getDialoguePattern();
+
+        List<String> dialoguePatterns = StringUtils.isBlank(dialoguePattern)
+                ? List.of()
+                : List.of(dialoguePattern);
+
+        List<ChapterInfoEntity> chapterInfoEntities = new ArrayList<>();
+
+        int paragraphIndex = 0;
+
+        for (String line : content.split("\n")) {
+            int splitIndex = 0;
+
+            List<Tuple2<Boolean, List<String>>> chapterInfoTuple2s = ChapterUtils.dialogueSplit(line, dialoguePatterns);
+
+            for (Tuple2<Boolean, List<String>> chapterInfoTuple2 : chapterInfoTuple2s) {
+
+                for (int i = 0; i < chapterInfoTuple2._2.size(); i++) {
+                    ChapterInfoEntity chapterInfoEntity = new ChapterInfoEntity();
+                    chapterInfoEntity.setProjectId(projectId);
+                    chapterInfoEntity.setChapterId(chapterId);
+                    chapterInfoEntity.setParagraphIndex(paragraphIndex);
+                    chapterInfoEntity.setSplitIndex(splitIndex);
+                    chapterInfoEntity.setSentenceIndex(i);
+                    chapterInfoEntity.setText(chapterInfoTuple2._2.get(i));
+                    chapterInfoEntity.setDialogueFlag(chapterInfoTuple2._1);
+
+                    chapterInfoEntity.setRole("旁白");
+
+                    chapterInfoEntities.add(chapterInfoEntity);
+                }
+
+                splitIndex++;
+            }
+
+            paragraphIndex++;
         }
 
-        if (StringUtils.isNotBlank(textContent)) {
-            List<String> dialoguePatterns = StringUtils.isBlank(dialoguePattern) ? List.of() : List.of(dialoguePattern);
+        aChapterInfoService.deleteByChapterId(chapterId);
+        aTextRoleService.deleteByChapterId(chapterId);
 
-            List<ChapterInfoEntity> chapterInfoEntities = new ArrayList<>();
+        if (!CollectionUtils.isEmpty(chapterInfoEntities)) {
 
-            int paragraphIndex = 0;
+            List<TextCommonRoleEntity> commonRoleEntities = aTextCommonRoleService.list(projectId);
+            Optional<TextCommonRoleEntity> asideRoleOptional = commonRoleEntities.stream()
+                    .filter(r -> StringUtils.equals(r.getRole(), "旁白"))
+                    .findAny();
 
-            for (String line : textContent.split("\n")) {
-                int splitIndex = 0;
+            TextRoleEntity textRoleEntity = new TextRoleEntity();
+            textRoleEntity.setProjectId(projectId);
+            textRoleEntity.setChapterId(chapterId);
+            textRoleEntity.setRole("旁白");
 
-                List<Tuple2<Boolean, List<String>>> chapterInfoTuple2s = ChapterUtils.dialogueSplit(line, dialoguePatterns);
+            if (asideRoleOptional.isPresent()) {
+                TextCommonRoleEntity textCommonRoleEntity = asideRoleOptional.get();
 
-                for (Tuple2<Boolean, List<String>> chapterInfoTuple2 : chapterInfoTuple2s) {
+                textRoleEntity.setFromCommonRole(textCommonRoleEntity);
 
-                    for (int i = 0; i < chapterInfoTuple2._2.size(); i++) {
-                        ChapterInfoEntity chapterInfoEntity = new ChapterInfoEntity();
-                        chapterInfoEntity.setProjectId(projectId);
-                        chapterInfoEntity.setChapterId(chapterId);
-                        chapterInfoEntity.setParagraphIndex(paragraphIndex);
-                        chapterInfoEntity.setSplitIndex(splitIndex);
-                        chapterInfoEntity.setSentenceIndex(i);
-                        chapterInfoEntity.setText(chapterInfoTuple2._2.get(i));
-                        chapterInfoEntity.setDialogueFlag(chapterInfoTuple2._1);
-
-                        chapterInfoEntity.setRole("旁白");
-
-                        chapterInfoEntities.add(chapterInfoEntity);
-                    }
-
-                    splitIndex++;
-                }
-
-                paragraphIndex++;
+                chapterInfoEntities = chapterInfoEntities.stream()
+                        .peek(c -> {
+                            c.setAudioModelType(textCommonRoleEntity.getAudioModelType());
+                            c.setAudioModelId(textCommonRoleEntity.getAudioModelId());
+                            c.setAudioConfigId(textCommonRoleEntity.getAudioConfigId());
+                            c.setRefAudioId(textCommonRoleEntity.getRefAudioId());
+                        }).toList();
             }
 
-            aChapterInfoService.deleteByProjectIdAndChapterId(projectId, chapterId);
-            aTextRoleService.delete(projectId, chapterId);
+            aChapterInfoService.deleteByChapterId(chapterId);
+            aChapterInfoService.saveBatch(chapterInfoEntities);
+            aTextRoleService.save(textRoleEntity);
 
-            if (!CollectionUtils.isEmpty(chapterInfoEntities)) {
+        }
+    }
 
-                List<TextCommonRoleEntity> commonRoleEntities = aTextCommonRoleService.list(projectId);
-                Optional<TextCommonRoleEntity> asideRoleOptional = commonRoleEntities.stream()
-                        .filter(r -> StringUtils.equals(r.getRole(), "旁白"))
-                        .findAny();
-
-                TextRoleEntity textRoleEntity = new TextRoleEntity();
-                textRoleEntity.setProjectId(projectId);
-                textRoleEntity.setChapterId(chapterId);
-                textRoleEntity.setRole("旁白");
-
-                if (asideRoleOptional.isPresent()) {
-                    TextCommonRoleEntity textCommonRoleEntity = asideRoleOptional.get();
-
-                    textRoleEntity.setFromCommonRole(textCommonRoleEntity);
-
-                    chapterInfoEntities = chapterInfoEntities.stream()
-                            .peek(c -> {
-                                c.setAudioModelType(textCommonRoleEntity.getAudioModelType());
-                                c.setAudioModelId(textCommonRoleEntity.getAudioModelId());
-                                c.setAudioConfigId(textCommonRoleEntity.getAudioConfigId());
-                                c.setRefAudioId(textCommonRoleEntity.getRefAudioId());
-                            }).toList();
-                }
-
-                aChapterInfoService.deleteByProjectIdAndChapterId(projectId, chapterId);
-                aChapterInfoService.saveBatch(chapterInfoEntities);
-                aTextRoleService.save(textRoleEntity);
-
-            }
+    @Override
+    public void chapterSort(List<TextChapterEntity> sortChapters) {
+        if (!CollectionUtils.isEmpty(sortChapters)) {
+            List<TextChapterEntity> saveList = sortChapters.stream().map(t -> {
+                TextChapterEntity textChapterEntity = new TextChapterEntity();
+                textChapterEntity.setId(t.getId());
+                textChapterEntity.setSortOrder(t.getSortOrder());
+                return textChapterEntity;
+            }).toList();
+            aTextChapterService.updateBatchById(saveList);
         }
     }
 
@@ -424,14 +530,14 @@ public class BTextChapterServiceImpl implements BTextChapterService {
                 saveTextRoles.add(textRoleEntity);
             }
 
-            aTextRoleService.delete(projectId, chapterId);
+            aTextRoleService.deleteByChapterId(chapterId);
             aTextRoleService.saveBatch(saveTextRoles);
         }
     }
 
     @Override
-    public String getContent(String projectId, String chapterId) {
-        return aTextChapterService.getContent(projectId, chapterId);
+    public TextChapterEntity getTextChapterAndContent(String projectId, String chapterId) {
+        return aTextChapterService.getTextChapterAndContent(projectId, chapterId);
     }
 
     @Override
@@ -779,6 +885,25 @@ public class BTextChapterServiceImpl implements BTextChapterService {
         aChapterInfoService.updateBatchById(chapterInfos);
     }
 
+    @Override
+    public void deleteChapter(TextChapterEntity textChapter) throws IOException {
+
+        TextProjectEntity project = aTextProjectService.getOne(textChapter.getProjectId());
+
+        aChapterInfoService.deleteByChapterId(textChapter.getChapterId());
+        aTextChapterService.deleteByChapterId(textChapter.getChapterId());
+
+        aTextRoleService.deleteByChapterId(textChapter.getChapterId());
+        aRoleInferenceService.deleteByChapterId(textChapter.getChapterId());
+
+        FileUtils.deleteDirectoryAll(Path.of(
+                pathConfig.getProjectDir(),
+                "text",
+                FileUtils.fileNameFormat(project.getProjectName()),
+                FileUtils.fileNameFormat(textChapter.getChapterName())
+        ));
+    }
+
     public void mergeAiResultInfo(String projectId, String chapterId, String aiResultStr, List<ChapterInfoEntity> chapterInfos) {
 
         try {
@@ -875,10 +1000,10 @@ public class BTextChapterServiceImpl implements BTextChapterService {
             aChapterInfoService.updateBatchById(chapterInfos);
             aChapterInfoService.audioModelReset(audioModelResetIds);
 
-            aTextRoleService.delete(projectId, chapterId);
+            aTextRoleService.deleteByChapterId(chapterId);
             aTextRoleService.saveBatch(textRoleEntities);
 
-            aRoleInferenceService.delete(projectId, chapterId);
+            aRoleInferenceService.deleteByChapterId(chapterId);
             aRoleInferenceService.saveBatch(roleInferenceEntities);
 
         } catch (IOException e) {
@@ -930,37 +1055,4 @@ public class BTextChapterServiceImpl implements BTextChapterService {
         newRoles.sort(Comparator.comparingLong((AiResult.Role r) -> linesRoleCountMap.get(r.getRole())).reversed());
         return newRoles;
     }
-
-
-    static String parseStep = """
-            1. 分析下面原文中有哪些角色，角色中有观众、群众之类的角色时统一使用观众这个角色，他们的性别和年龄段只能在下面范围中选择一个：
-            性别：男、女、未知。
-            年龄段：少年、青年、中年、老年、未知。
-
-            2. 请分析下面台词部分的内容是属于原文部分中哪个角色的，然后结合上下文分析当时的情绪，情绪只能在下面范围中选择一个：
-            情绪：中立、开心、吃惊、难过、厌恶、生气、恐惧。
-
-            3. 严格按照台词文本中的顺序在原文文本中查找。每行台词都做一次处理，不能合并台词。
-            4. 返回结果是JSON数组结构的字符串。
-            5. 分析的台词内容如果不是台词，不要加入到返回结果中。
-            """;
-
-    static String outputFormat = """
-            {
-              "roles": [
-                {
-                  "role": "这里是具体的角色名",
-                  "gender": "男",
-                  "ageGroup": "青年"
-                }
-              ],
-              "linesMappings": [
-                {
-                  "linesIndex": "这里的值是台词前的序号",
-                  "role": "这里是具体的角色名",
-                  "mood": "自卑"
-                }
-              ]
-            }
-            """;
 }

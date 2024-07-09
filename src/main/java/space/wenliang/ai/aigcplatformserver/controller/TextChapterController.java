@@ -6,9 +6,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import space.wenliang.ai.aigcplatformserver.bean.ChapterExpose;
-import space.wenliang.ai.aigcplatformserver.bean.ControlsUpdate;
-import space.wenliang.ai.aigcplatformserver.bean.TextRoleChange;
+import space.wenliang.ai.aigcplatformserver.bean.*;
+import space.wenliang.ai.aigcplatformserver.common.Page;
 import space.wenliang.ai.aigcplatformserver.common.Result;
 import space.wenliang.ai.aigcplatformserver.entity.ChapterInfoEntity;
 import space.wenliang.ai.aigcplatformserver.entity.TextChapterEntity;
@@ -18,6 +17,7 @@ import space.wenliang.ai.aigcplatformserver.service.business.BChapterInfoService
 import space.wenliang.ai.aigcplatformserver.service.business.BTextChapterService;
 import space.wenliang.ai.aigcplatformserver.spring.annotation.SingleValueParam;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,35 +34,53 @@ public class TextChapterController {
         this.bChapterInfoService = bChapterInfoService;
     }
 
-    @PostMapping("chapters")
-    public Result<List<TextChapterEntity>> chapters(@SingleValueParam("projectId") String projectId) {
-        List<TextChapterEntity> list = bTextChapterService.chapters(projectId);
+    @PostMapping("pageChapters")
+    public Result<Object> pageChapters(@RequestBody ProjectQuery projectQuery) {
+        Page<TextChapterEntity> page = bTextChapterService.pageChapters(projectQuery);
+        return Result.success(page);
+    }
+
+    @PostMapping("chapters4Sort")
+    public Result<List<TextChapterEntity>> chapters4Sort(@SingleValueParam("projectId") String projectId) {
+        List<TextChapterEntity> list = bTextChapterService.chapters4Sort(projectId);
         return Result.success(list);
     }
 
-    @PostMapping("getContent")
+    @PostMapping(value = "deleteChapter")
+    public Result<Object> deleteChapter(@RequestBody TextChapterEntity textChapter) throws IOException {
+        bTextChapterService.deleteChapter(textChapter);
+        return Result.success();
+    }
+
+    @PostMapping("getTextChapter")
     public Result<Object> getContent(@SingleValueParam("projectId") String projectId,
                                      @SingleValueParam("chapterId") String chapterId) {
-        String content = bTextChapterService.getContent(projectId, chapterId);
-        return Result.success(content);
+        TextChapterEntity textChapter = bTextChapterService.getTextChapterAndContent(projectId, chapterId);
+        return Result.success(textChapter);
     }
 
     @PostMapping("tmpDialogueParse")
-    public Result<Object> tmpDialogueParse(@SingleValueParam("projectId") String projectId,
-                                           @SingleValueParam("chapterId") String chapterId,
-                                           @SingleValueParam("dialoguePattern") String dialoguePattern,
-                                           @SingleValueParam("textContent") String textContent) {
+    public Result<Object> tmpDialogueParse(@RequestBody TextChapterEntity textChapter) {
         List<ChapterInfoEntity> chapterInfoEntities =
-                bTextChapterService.tmpDialogueParse(projectId, chapterId, dialoguePattern, textContent);
+                bTextChapterService.tmpDialogueParse(textChapter);
         return Result.success(chapterInfoEntities);
     }
 
-    @PostMapping("dialogueParse")
-    public Result<Object> dialogueParse(@SingleValueParam("projectId") String projectId,
-                                        @SingleValueParam("chapterId") String chapterId,
-                                        @SingleValueParam("dialoguePattern") String dialoguePattern,
-                                        @SingleValueParam("textContent") String textContent) {
-        bTextChapterService.dialogueParse(projectId, chapterId, dialoguePattern, textContent);
+    @PostMapping("chapterEdit")
+    public Result<Object> chapterEdit(@RequestBody TextChapterEntity textChapter) {
+        bTextChapterService.chapterEdit(textChapter);
+        return Result.success();
+    }
+
+    @PostMapping("chapterAdd")
+    public Result<Object> chapterAdd(@RequestBody ChapterAdd chapterAdd) {
+        bTextChapterService.chapterAdd(chapterAdd);
+        return Result.success();
+    }
+
+    @PostMapping("chapterSort")
+    public Result<Object> chapterSort(@RequestBody List<TextChapterEntity> sortChapters) {
+        bTextChapterService.chapterSort(sortChapters);
         return Result.success();
     }
 
@@ -180,6 +198,12 @@ public class TextChapterController {
     @PostMapping(value = "updateChapterText")
     public Result<Object> updateChapterText(@RequestBody ChapterInfoEntity chapterInfoEntity) {
         bChapterInfoService.updateChapterText(chapterInfoEntity);
+        return Result.success();
+    }
+
+    @PostMapping(value = "deleteChapterInfo")
+    public Result<Object> deleteChapterInfo(@RequestBody ChapterInfoEntity chapterInfoEntity) {
+        bChapterInfoService.deleteChapterInfo(chapterInfoEntity);
         return Result.success();
     }
 

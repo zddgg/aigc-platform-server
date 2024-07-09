@@ -23,6 +23,8 @@ public class TextChapterEntity {
 
     private String dialoguePattern;
 
+    private Integer sortOrder;
+
     @TableField(exist = false)
     private Long textNum;
 
