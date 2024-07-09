@@ -6,8 +6,7 @@ WORKDIR /app
 
 # 复制并解析 pom.xml 获取版本号
 COPY pom.xml /tmp/
-RUN apt-get update && \
-    apt-get install -y maven && \
+RUN apt-get install -y maven && \
     VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout) && \
     echo "VERSION=${VERSION}" > /tmp/version.txt
 
