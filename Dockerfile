@@ -12,7 +12,7 @@ RUN apt-get install -y maven && \
 
 # 复制构建好的 JAR 文件到工作目录
 RUN VERSION=$(cat /tmp/version.txt | cut -d'=' -f2) && \
-    cp target/aigc-platform-server-${VERSION}.jar /app/app.jar \
+    cp target/aigc-platform-server-${VERSION}.jar /app/app.jar
 
 # 启动 Spring Boot 应用程序
 CMD ["java", "--enable-preview", "-Dspring.profiles.active=prod,split,linux,mysql", "-jar", "/app/app.jar"]
