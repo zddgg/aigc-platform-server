@@ -57,6 +57,7 @@ public class BTextProjectServiceImpl implements BTextProjectService {
                                                                            List<Tuple2<String, String>> tuple2s,
                                                                            String dialoguePattern) {
         List<TextChapterEntity> textChapterEntities = new ArrayList<>();
+        int i = 0;
         for (Tuple2<String, String> tuple2 : tuple2s) {
             TextChapterEntity textChapterEntity = new TextChapterEntity();
             textChapterEntity.setProjectId(projectId);
@@ -64,6 +65,7 @@ public class BTextProjectServiceImpl implements BTextProjectService {
             textChapterEntity.setChapterName(tuple2._1);
             textChapterEntity.setContent(tuple2._2);
             textChapterEntity.setDialoguePattern(dialoguePattern);
+            textChapterEntity.setSortOrder(i++);
 
             textChapterEntities.add(textChapterEntity);
         }

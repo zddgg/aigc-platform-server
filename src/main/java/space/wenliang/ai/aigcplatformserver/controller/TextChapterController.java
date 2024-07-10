@@ -128,6 +128,12 @@ public class TextChapterController {
         return Result.success();
     }
 
+    @PostMapping("saveToCommonRole")
+    public Result<Object> saveToCommonRole(@RequestBody TextRoleEntity textRoleEntity) {
+        Boolean result = bTextChapterService.saveToCommonRole(textRoleEntity);
+        return Result.success(result);
+    }
+
     @PostMapping("commonRoles")
     public Result<Object> commonRoles(@SingleValueParam("projectId") String projectId) {
         List<TextCommonRoleEntity> list = bTextChapterService.commonRoles(projectId);

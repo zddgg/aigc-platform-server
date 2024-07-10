@@ -904,6 +904,34 @@ public class BTextChapterServiceImpl implements BTextChapterService {
         ));
     }
 
+    @Override
+    public Boolean saveToCommonRole(TextRoleEntity textRoleEntity) {
+        List<TextCommonRoleEntity> commonRoleEntities = aTextCommonRoleService.list(
+                new LambdaQueryWrapper<TextCommonRoleEntity>()
+                        .eq(TextCommonRoleEntity::getRole, textRoleEntity.getRole()));
+
+        if (!Objects.equals(textRoleEntity.getCover(), Boolean.TRUE) && !CollectionUtils.isEmpty(commonRoleEntities)) {
+            return false;
+        }
+
+        if (!CollectionUtils.isEmpty(commonRoleEntities)) {
+            aTextCommonRoleService.removeByIds(commonRoleEntities.stream().map(TextCommonRoleEntity::getId).toList());
+        }
+
+        TextCommonRoleEntity textCommonRoleEntity = new TextCommonRoleEntity();
+        textCommonRoleEntity.setProjectId(textRoleEntity.getProjectId());
+        textCommonRoleEntity.setRole(textRoleEntity.getRole());
+        textCommonRoleEntity.setGender(textRoleEntity.getGender());
+        textCommonRoleEntity.setAgeGroup(textRoleEntity.getAgeGroup());
+        textCommonRoleEntity.setAudioModelType(textRoleEntity.getAudioModelType());
+        textCommonRoleEntity.setAudioModelId(textRoleEntity.getAudioModelId());
+        textCommonRoleEntity.setAudioConfigId(textRoleEntity.getAudioConfigId());
+        textCommonRoleEntity.setRefAudioId(textRoleEntity.getRefAudioId());
+        aTextCommonRoleService.save(textCommonRoleEntity);
+
+        return true;
+    }
+
     public void mergeAiResultInfo(String projectId, String chapterId, String aiResultStr, List<ChapterInfoEntity> chapterInfos) {
 
         try {
