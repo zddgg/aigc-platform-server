@@ -34,6 +34,9 @@ public class TextRoleEntity extends AudioModelConfigExt {
     @TableField(exist = false)
     private Long roleCount;
 
+    @TableField(exist = false)
+    private Boolean cover;
+
     public void setFromCommonRole(TextCommonRoleEntity textCommonRoleEntity) {
         this.setGender(textCommonRoleEntity.getGender());
         this.setAgeGroup(textCommonRoleEntity.getAgeGroup());

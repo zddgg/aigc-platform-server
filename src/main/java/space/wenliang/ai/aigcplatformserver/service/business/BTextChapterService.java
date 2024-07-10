@@ -57,4 +57,6 @@ public interface BTextChapterService {
     void chapterExpose(ChapterExpose chapterExpose);
 
     void deleteChapter(TextChapterEntity textChapter) throws IOException;
+
+    Boolean saveToCommonRole(TextRoleEntity textRoleEntity);
 }

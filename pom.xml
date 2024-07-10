@@ -12,7 +12,7 @@
 
     <groupId>space.wenliang.ai</groupId>
     <artifactId>aigc-platform-server</artifactId>
-    <version>1.1.0</version>
+    <version>2.4.0</version>
 
     <name>aigc-platform-server</name>
 
