@@ -1,6 +1,7 @@
 package space.wenliang.ai.aigcplatformserver.service.business.impl;
 
 import io.vavr.Tuple2;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
@@ -27,6 +28,7 @@ import java.util.Objects;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class BTextProjectServiceImpl implements BTextProjectService {
 
     private final PathConfig pathConfig;
@@ -36,22 +38,6 @@ public class BTextProjectServiceImpl implements BTextProjectService {
     private final ATextRoleService aTextRoleService;
     private final ATextCommonRoleService aTextCommonRoleService;
     private final ARoleInferenceService aRoleInferenceService;
-
-    public BTextProjectServiceImpl(PathConfig pathConfig,
-                                   ATextProjectService aTextProjectService,
-                                   ATextChapterService aTextChapterService,
-                                   AChapterInfoService aChapterInfoService,
-                                   ATextRoleService aTextRoleService,
-                                   ATextCommonRoleService aTextCommonRoleService,
-                                   ARoleInferenceService aRoleInferenceService) {
-        this.pathConfig = pathConfig;
-        this.aTextProjectService = aTextProjectService;
-        this.aTextChapterService = aTextChapterService;
-        this.aChapterInfoService = aChapterInfoService;
-        this.aTextRoleService = aTextRoleService;
-        this.aTextCommonRoleService = aTextCommonRoleService;
-        this.aRoleInferenceService = aRoleInferenceService;
-    }
 
     private static @NotNull List<TextChapterEntity> getTextChapterEntities(String projectId,
                                                                            List<Tuple2<String, String>> tuple2s,

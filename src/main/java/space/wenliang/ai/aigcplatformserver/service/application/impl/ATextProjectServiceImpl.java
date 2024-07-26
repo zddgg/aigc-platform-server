@@ -14,7 +14,6 @@ import java.util.List;
 public class ATextProjectServiceImpl extends ServiceImpl<TextProjectMapper, TextProjectEntity>
         implements ATextProjectService {
 
-
     @Override
     public List<TextProjectEntity> list() {
         return this.list(new LambdaQueryWrapper<TextProjectEntity>()

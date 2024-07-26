@@ -12,7 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import space.wenliang.ai.aigcplatformserver.ai.audio.AudioContext;
 import space.wenliang.ai.aigcplatformserver.ai.audio.AudioCreator;
+import space.wenliang.ai.aigcplatformserver.bean.AddPhoneticAnno;
 import space.wenliang.ai.aigcplatformserver.bean.ControlsUpdate;
+import space.wenliang.ai.aigcplatformserver.bean.PhoneticAnno;
 import space.wenliang.ai.aigcplatformserver.common.ModelTypeEnum;
 import space.wenliang.ai.aigcplatformserver.config.PathConfig;
 import space.wenliang.ai.aigcplatformserver.entity.*;
@@ -296,6 +298,130 @@ public class BChapterInfoServiceImpl implements BChapterInfoService {
     @Override
     public void deleteChapterInfo(ChapterInfoEntity chapterInfoEntity) {
         aChapterInfoService.removeById(chapterInfoEntity.getId());
+    }
+
+    @Override
+    public ChapterInfoEntity addChapterInfo(ChapterInfoEntity chapterInfo) {
+        ChapterInfoEntity chapterInfoEntity = new ChapterInfoEntity();
+        chapterInfoEntity.setProjectId(chapterInfo.getProjectId());
+        chapterInfoEntity.setChapterId(chapterInfo.getChapterId());
+        chapterInfoEntity.setText(chapterInfo.getText());
+        chapterInfoEntity.setSortOrder(chapterInfo.getSortOrder());
+        String aside = "旁白";
+        chapterInfoEntity.setRole(aside);
+
+
+        List<TextCommonRoleEntity> commonRoleEntities = aTextCommonRoleService.list(chapterInfo.getProjectId());
+        Optional<TextCommonRoleEntity> asideRoleOptional = commonRoleEntities.stream()
+                .filter(r -> StringUtils.equals(r.getRole(), aside))
+                .findAny();
+
+        if (asideRoleOptional.isPresent()) {
+            TextCommonRoleEntity textCommonRoleEntity = asideRoleOptional.get();
+
+            chapterInfoEntity.setAudioModelType(textCommonRoleEntity.getAudioModelType());
+            chapterInfoEntity.setAudioModelId(textCommonRoleEntity.getAudioModelId());
+            chapterInfoEntity.setAudioConfigId(textCommonRoleEntity.getAudioConfigId());
+            chapterInfoEntity.setRefAudioId(textCommonRoleEntity.getRefAudioId());
+        }
+
+        TextRoleEntity textRole = aTextRoleService.getByRole(chapterInfoEntity.getProjectId(), chapterInfoEntity.getChapterId(), aside);
+
+        if (Objects.nonNull(textRole)) {
+            chapterInfoEntity.setAudioModelType(textRole.getAudioModelType());
+            chapterInfoEntity.setAudioModelId(textRole.getAudioModelId());
+            chapterInfoEntity.setAudioConfigId(textRole.getAudioConfigId());
+            chapterInfoEntity.setRefAudioId(textRole.getRefAudioId());
+        }
+
+        List<ChapterInfoEntity> chapterInfoEntities = aChapterInfoService.list(chapterInfo.getProjectId(), chapterInfo.getChapterId());
+        int i = 0;
+        List<ChapterInfoEntity> updateList = new ArrayList<>();
+        for (ChapterInfoEntity infoEntity : chapterInfoEntities) {
+            ChapterInfoEntity save = new ChapterInfoEntity();
+            save.setId(infoEntity.getId());
+            if (i >= Optional.ofNullable(chapterInfo.getSortOrder()).orElse(0)) {
+                save.setSortOrder(i + 1);
+            } else {
+                save.setSortOrder(i);
+            }
+            i++;
+
+            updateList.add(save);
+        }
+
+        aChapterInfoService.updateBatchById(updateList);
+        aChapterInfoService.save(chapterInfoEntity);
+
+
+        return chapterInfoEntity;
+    }
+
+    @Override
+    public void chapterInfoSort(List<ChapterInfoEntity> chapterInfos) {
+        List<ChapterInfoEntity> updateList = chapterInfos.stream().filter(c -> Objects.nonNull(c.getId()))
+                .map(c -> {
+                    ChapterInfoEntity save = new ChapterInfoEntity();
+                    save.setId(c.getId());
+                    save.setSortOrder(c.getSortOrder());
+                    return save;
+                })
+                .toList();
+        aChapterInfoService.updateBatchById(updateList);
+    }
+
+    @Override
+    public void addPhoneticAnno(AddPhoneticAnno addPhoneticAnno) {
+        ChapterInfoEntity chapterInfoEntity = aChapterInfoService.getById(addPhoneticAnno.getChapterInfoId());
+        if (Objects.nonNull(chapterInfoEntity)) {
+            String phoneticInfostr = chapterInfoEntity.getPhoneticInfo();
+
+            List<PhoneticAnno> phoneticAnnos = new ArrayList<>();
+
+            if (StringUtils.isNotBlank(phoneticInfostr)) {
+                phoneticAnnos = JSON.parseArray(phoneticInfostr, PhoneticAnno.class);
+            }
+
+            boolean added = false;
+            for (PhoneticAnno phoneticAnno : phoneticAnnos) {
+                if (StringUtils.equals(addPhoneticAnno.getType(), phoneticAnno.getType())
+                        && Objects.equals(addPhoneticAnno.getIndex(), phoneticAnno.getIndex())) {
+                    phoneticAnno.setPinyin(addPhoneticAnno.getPinyin());
+                    added = true;
+                }
+            }
+            if (!added) {
+                phoneticAnnos.add(addPhoneticAnno);
+            }
+
+            aChapterInfoService.update(new LambdaUpdateWrapper<ChapterInfoEntity>()
+                    .eq(ChapterInfoEntity::getId, addPhoneticAnno.getChapterInfoId())
+                    .set(ChapterInfoEntity::getPhoneticInfo, JSON.toJSONString(phoneticAnnos)));
+        }
+    }
+
+    @Override
+    public void removePhoneticAnno(AddPhoneticAnno addPhoneticAnno) {
+        ChapterInfoEntity chapterInfoEntity = aChapterInfoService.getById(addPhoneticAnno.getChapterInfoId());
+        if (Objects.nonNull(chapterInfoEntity)) {
+
+            String phoneticInfostr = chapterInfoEntity.getPhoneticInfo();
+
+            List<PhoneticAnno> phoneticAnnos = new ArrayList<>();
+
+            if (StringUtils.isNotBlank(phoneticInfostr)) {
+                phoneticAnnos = JSON.parseArray(phoneticInfostr, PhoneticAnno.class);
+            }
+
+            List<PhoneticAnno> saveList = phoneticAnnos.stream().filter(p ->
+                            !(StringUtils.equals(addPhoneticAnno.getType(), p.getType())
+                                    && Objects.equals(addPhoneticAnno.getIndex(), p.getIndex())))
+                    .toList();
+
+            aChapterInfoService.update(new LambdaUpdateWrapper<ChapterInfoEntity>()
+                    .eq(ChapterInfoEntity::getId, addPhoneticAnno.getChapterInfoId())
+                    .set(ChapterInfoEntity::getPhoneticInfo, JSON.toJSONString(phoneticAnnos)));
+        }
     }
 
     public void audioCreateTask() {

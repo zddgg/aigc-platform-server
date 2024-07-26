@@ -45,17 +45,23 @@ public class ChapterInfoEntity extends AudioModelConfigExt {
     private String audioConfigId;
     private String refAudioId;
 
-    private Double audioVolume = 1.0;
+    private Double audioVolume;
 
-    private Double audioSpeed = 1.0;
+    private Double audioSpeed;
 
-    private Integer nextAudioInterval = 300;
+    private Integer nextAudioInterval;
 
     private Integer audioState;
 
     private Long audioLength;
 
     private Boolean audioExportFlag;
+
+    private Integer sortOrder;
+
+    private String phoneticInfo;
+
+    private String audioInstruct;
 
     @TableField(exist = false)
     private String index;
@@ -66,7 +72,6 @@ public class ChapterInfoEntity extends AudioModelConfigExt {
         }
         return null;
     }
-
 
     public String getSecondIndex() {
         if (Objects.nonNull(paragraphIndex) && Objects.nonNull(splitIndex)) {

@@ -28,6 +28,9 @@ public class PathConfig {
     private String remoteModelDir;
     @Value("${server.domain:}")
     private String serverDomain;
+    @Value("${user.dir}")
+    private String userDir;
+
     private String modelDir;
     private String projectDir;
 
@@ -47,8 +50,6 @@ public class PathConfig {
 
     @PostConstruct
     public void init() {
-        String userDir = env.getProperty("user.dir");
-
         String domain = serverDomain;
 
         if (StringUtils.isBlank(domain)) {

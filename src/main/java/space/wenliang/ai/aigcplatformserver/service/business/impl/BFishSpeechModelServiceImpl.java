@@ -1,5 +1,6 @@
 package space.wenliang.ai.aigcplatformserver.service.business.impl;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -22,15 +23,11 @@ import java.util.stream.Stream;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class BFishSpeechModelServiceImpl implements BFishSpeechModelService {
 
     private final PathConfig pathConfig;
     private final AFishSpeechModelService aFishSpeechModelService;
-
-    public BFishSpeechModelServiceImpl(PathConfig pathConfig, AFishSpeechModelService aFishSpeechModelService) {
-        this.pathConfig = pathConfig;
-        this.aFishSpeechModelService = aFishSpeechModelService;
-    }
 
     @Override
     public List<FishSpeechModelEntity> list() {

@@ -12,6 +12,7 @@ import java.util.List;
 @Service
 public class AChatTtsConfigServiceImpl extends ServiceImpl<ChatTtsConfigMapper, ChatTtsConfigEntity>
         implements AChatTtsConfigService {
+
     @Override
     public List<ChatTtsConfigEntity> getByConfigName(String configName) {
         return this.list(new LambdaQueryWrapper<ChatTtsConfigEntity>()

@@ -1,6 +1,7 @@
 package space.wenliang.ai.aigcplatformserver.service.business.impl;
 
 import com.alibaba.fastjson2.JSON;
+import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -24,6 +25,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class BEdgeTtsServiceImpl implements BEdgeTtsService {
 
     private final PathConfig pathConfig;
@@ -32,15 +34,6 @@ public class BEdgeTtsServiceImpl implements BEdgeTtsService {
     private final ARefAudioService aRefAudioService;
     private final AEdgeTtsConfigService aEdgeTtsConfigService;
     private final AEdgeTtsSettingService aEdgeTtsSettingService;
-
-    public BEdgeTtsServiceImpl(PathConfig pathConfig, AudioCreator audioCreator, EdgeTtsCreator edgeTtsCreator, ARefAudioService aRefAudioService, AEdgeTtsConfigService aEdgeTtsConfigService, AEdgeTtsSettingService aEdgeTtsSettingService) {
-        this.pathConfig = pathConfig;
-        this.audioCreator = audioCreator;
-        this.edgeTtsCreator = edgeTtsCreator;
-        this.aRefAudioService = aRefAudioService;
-        this.aEdgeTtsConfigService = aEdgeTtsConfigService;
-        this.aEdgeTtsSettingService = aEdgeTtsSettingService;
-    }
 
     @Override
     public List<EdgeTtsConfigEntity> configs() {

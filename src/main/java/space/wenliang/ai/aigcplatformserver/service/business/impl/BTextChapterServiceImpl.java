@@ -5,6 +5,7 @@ import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import io.vavr.Tuple2;
+import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -34,6 +35,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class BTextChapterServiceImpl implements BTextChapterService {
 
     static String parseStep = """
@@ -45,26 +47,16 @@ public class BTextChapterServiceImpl implements BTextChapterService {
             情绪：中立、开心、吃惊、难过、厌恶、生气、恐惧。
 
             3. 严格按照台词文本中的顺序在原文文本中查找。每行台词都做一次处理，不能合并台词。
-            4. 返回结果是JSON数组结构的字符串。
-            5. 分析的台词内容如果不是台词，不要加入到返回结果中。
+            4. 分析的台词内容如果不是台词，不要加入到返回结果中。
             """;
     static String outputFormat = """
-            {
-              "roles": [
-                {
-                  "role": "这里是具体的角色名",
-                  "gender": "男",
-                  "ageGroup": "青年"
-                }
-              ],
-              "linesMappings": [
-                {
-                  "linesIndex": "这里的值是台词前的序号",
-                  "role": "这里是具体的角色名",
-                  "mood": "自卑"
-                }
-              ]
-            }
+            roles:
+            角色名1,男,青年
+            角色名2,男,青年
+                        
+            linesMappings:
+            台词序号1,角色名1,高兴
+            台词序号2,角色名2,难过
             """;
     private final AiService aiService;
     private final ATextRoleService aTextRoleService;
@@ -83,45 +75,12 @@ public class BTextChapterServiceImpl implements BTextChapterService {
     private final PathConfig pathConfig;
     private final GlobalWebSocketHandler globalWebSocketHandler;
 
-    public BTextChapterServiceImpl(AiService aiService,
-                                   ATextRoleService aTextRoleService,
-                                   ATextChapterService aTextChapterService,
-                                   ATextProjectService aTextProjectService,
-                                   AChapterInfoService aChapterInfoService,
-                                   ARoleInferenceService aRoleInferenceService,
-                                   ATextCommonRoleService aTextCommonRoleService,
-                                   ARefAudioService aRefAudioService,
-                                   AGptSovitsModelService aGptSovitsModelService,
-                                   AGptSovitsConfigService aGptSovitsConfigService,
-                                   AFishSpeechModelService aFishSpeechModelService,
-                                   AFishSpeechConfigService aFishSpeechConfigService,
-                                   AChatTtsConfigService aChatTtsConfigService,
-                                   AEdgeTtsConfigService aEdgeTtsConfigService,
-                                   PathConfig pathConfig,
-                                   GlobalWebSocketHandler globalWebSocketHandler) {
-        this.aiService = aiService;
-        this.aTextRoleService = aTextRoleService;
-        this.aTextChapterService = aTextChapterService;
-        this.aTextProjectService = aTextProjectService;
-        this.aChapterInfoService = aChapterInfoService;
-        this.aRoleInferenceService = aRoleInferenceService;
-        this.aTextCommonRoleService = aTextCommonRoleService;
-        this.aRefAudioService = aRefAudioService;
-        this.aGptSovitsModelService = aGptSovitsModelService;
-        this.aGptSovitsConfigService = aGptSovitsConfigService;
-        this.aFishSpeechModelService = aFishSpeechModelService;
-        this.aFishSpeechConfigService = aFishSpeechConfigService;
-        this.aChatTtsConfigService = aChatTtsConfigService;
-        this.aEdgeTtsConfigService = aEdgeTtsConfigService;
-        this.pathConfig = pathConfig;
-        this.globalWebSocketHandler = globalWebSocketHandler;
-    }
-
     @Override
     public Page<TextChapterEntity> pageChapters(ProjectQuery projectQuery) {
         Page<TextChapterEntity> page = aTextChapterService.page(
                 Page.of(projectQuery.getCurrent(), projectQuery.getPageSize()),
                 new LambdaQueryWrapper<TextChapterEntity>()
+                        .select(TextChapterEntity.class, entityClass -> !entityClass.getColumn().equals("content"))
                         .eq(TextChapterEntity::getProjectId, projectQuery.getProjectId())
                         .orderByAsc(TextChapterEntity::getSortOrder, TextChapterEntity::getId));
         if (!CollectionUtils.isEmpty(page.getRecords())) {
@@ -934,15 +893,17 @@ public class BTextChapterServiceImpl implements BTextChapterService {
 
     public void mergeAiResultInfo(String projectId, String chapterId, String aiResultStr, List<ChapterInfoEntity> chapterInfos) {
 
+        System.out.println("=========================文本大模型返回结果=========================");
+        System.out.println(aiResultStr);
+        System.out.println("=========================文本大模型返回结果=========================");
+
         try {
 
-            String text = formatAiResult(aiResultStr);
+            AiResult aiResult = formatAiResult(aiResultStr);
 
-            if (!JSON.isValid(text)) {
-                globalWebSocketHandler.sendErrorMessage("文本大模型返回格式不正确");
-            }
-
-            AiResult aiResult = JSON.parseObject(text, AiResult.class);
+//            if (!JSON.isValid(text)) {
+//                globalWebSocketHandler.sendErrorMessage("文本大模型返回格式不正确");
+//            }
 
             aiResult = reCombineAiResult(aiResult);
 
@@ -1039,11 +1000,38 @@ public class BTextChapterServiceImpl implements BTextChapterService {
         }
     }
 
-    public String formatAiResult(String text) {
-        if (text.startsWith("```json") || text.endsWith("```")) {
-            text = text.replace("```json", "").replace("```", "");
+    public AiResult formatAiResult(String text) {
+        if (StringUtils.isBlank(text)) {
+            return null;
         }
-        return text;
+
+        boolean isMapping = false;
+        List<AiResult.Role> roles = new ArrayList<>();
+        List<AiResult.LinesMapping> linesMappings = new ArrayList<>();
+        for (String line : text.split("\n")) {
+            if (StringUtils.equals("roles:", line)) {
+                isMapping = false;
+                continue;
+            }
+            if (StringUtils.equals("linesMappings:", line)) {
+                isMapping = true;
+                continue;
+            }
+            if (!isMapping) {
+                String[] split = line.split(",");
+                if (split.length == 3) {
+                    roles.add(new AiResult.Role(split[0], split[1], split[2]));
+                }
+            }
+            if (isMapping) {
+                String[] split = line.split(",");
+                if (split.length == 3) {
+                    linesMappings.add(new AiResult.LinesMapping(split[0], split[1], split[2]));
+                }
+            }
+        }
+
+        return new AiResult(roles, linesMappings);
     }
 
     public AiResult reCombineAiResult(AiResult aiResult) throws IOException {

@@ -1,5 +1,6 @@
 package space.wenliang.ai.aigcplatformserver.service.business.impl;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import space.wenliang.ai.aigcplatformserver.entity.ChatModelConfigEntity;
 import space.wenliang.ai.aigcplatformserver.entity.ChatModelTemplateEntity;
@@ -10,15 +11,11 @@ import space.wenliang.ai.aigcplatformserver.service.business.BChatModelConfigSer
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class BChatModelConfigServiceImpl implements BChatModelConfigService {
 
     private final AChatModelConfigService aChatModelConfigService;
     private final AChatModelTemplateService aChatModelTemplateService;
-
-    public BChatModelConfigServiceImpl(AChatModelConfigService aChatModelConfigService, AChatModelTemplateService aChatModelTemplateService) {
-        this.aChatModelConfigService = aChatModelConfigService;
-        this.aChatModelTemplateService = aChatModelTemplateService;
-    }
 
     @Override
     public List<ChatModelConfigEntity> list() {

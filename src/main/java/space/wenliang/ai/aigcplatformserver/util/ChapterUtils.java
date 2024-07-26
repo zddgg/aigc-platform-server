@@ -122,26 +122,28 @@ public class ChapterUtils {
     }
 
     public static List<String> textLenFormat(String text) {
-        List<String> result = new ArrayList<>();
-        if (text == null || text.isEmpty()) {
-            return result;
-        }
+        return List.of(text);
 
-        int start = 0;
-        while (start < text.length()) {
-            int end = findSplitPoint(text, start, MAX_CHARS_PER_LINE);
-            String subtitle = text.substring(start, end).trim();
-
-            if (!result.isEmpty() && subtitle.length() < MIN_CHARS_PER_LINE) {
-                String lastSubtitle = result.remove(result.size() - 1);
-                subtitle = lastSubtitle + " " + subtitle;
-            }
-
-            result.add(subtitle);
-            start = end;
-        }
-
-        return result;
+//        List<String> result = new ArrayList<>();
+//        if (text == null || text.isEmpty()) {
+//            return result;
+//        }
+//
+//        int start = 0;
+//        while (start < text.length()) {
+//            int end = findSplitPoint(text, start, MAX_CHARS_PER_LINE);
+//            String subtitle = text.substring(start, end).trim();
+//
+//            if (!result.isEmpty() && subtitle.length() < MIN_CHARS_PER_LINE) {
+//                String lastSubtitle = result.remove(result.size() - 1);
+//                subtitle = lastSubtitle + " " + subtitle;
+//            }
+//
+//            result.add(subtitle);
+//            start = end;
+//        }
+//
+//        return result;
     }
 
     private static int findSplitPoint(String text, int start, int maxLength) {

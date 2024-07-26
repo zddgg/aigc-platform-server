@@ -2,6 +2,7 @@ package space.wenliang.ai.aigcplatformserver.service.business.impl;
 
 import cn.hutool.core.io.file.FileNameUtil;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -26,17 +27,12 @@ import java.util.stream.Stream;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class BRefAudioServiceImpl implements BRefAudioService {
 
     private final PathConfig pathConfig;
     private final ARefAudioService aRefAudioService;
     private final AEdgeTtsConfigService aEdgeTtsConfigService;
-
-    public BRefAudioServiceImpl(PathConfig pathConfig, ARefAudioService aRefAudioService, AEdgeTtsConfigService aEdgeTtsConfigService) {
-        this.pathConfig = pathConfig;
-        this.aRefAudioService = aRefAudioService;
-        this.aEdgeTtsConfigService = aEdgeTtsConfigService;
-    }
 
     public static List<RefAudioEntity> buildLocalRefAudios(Path refAudioPath) throws IOException {
         Map<String, String> refAudioAvatarMap = new HashMap<>();

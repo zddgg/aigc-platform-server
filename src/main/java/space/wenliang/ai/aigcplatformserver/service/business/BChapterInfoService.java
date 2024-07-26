@@ -1,6 +1,7 @@
 package space.wenliang.ai.aigcplatformserver.service.business;
 
 import io.vavr.Tuple2;
+import space.wenliang.ai.aigcplatformserver.bean.AddPhoneticAnno;
 import space.wenliang.ai.aigcplatformserver.bean.ControlsUpdate;
 import space.wenliang.ai.aigcplatformserver.entity.ChapterInfoEntity;
 
@@ -29,4 +30,12 @@ public interface BChapterInfoService {
     void stopCreateAudio();
 
     void deleteChapterInfo(ChapterInfoEntity chapterInfoEntity);
+
+    ChapterInfoEntity addChapterInfo(ChapterInfoEntity chapterInfo);
+
+    void chapterInfoSort(List<ChapterInfoEntity> chapterInfos);
+
+    void addPhoneticAnno(AddPhoneticAnno addPhoneticAnno);
+
+    void removePhoneticAnno(AddPhoneticAnno addPhoneticAnno);
 }

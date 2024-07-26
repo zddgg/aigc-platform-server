@@ -15,4 +15,6 @@ public interface ATextRoleService extends IService<TextRoleEntity> {
     void deleteByProjectId(String projectId);
 
     Map<String, Long> chapterGroupCount();
+
+    TextRoleEntity getByRole(String projectId, String chapterId, String role);
 }

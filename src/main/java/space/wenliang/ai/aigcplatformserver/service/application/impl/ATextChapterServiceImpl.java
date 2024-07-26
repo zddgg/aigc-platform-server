@@ -2,6 +2,7 @@ package space.wenliang.ai.aigcplatformserver.service.application.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import space.wenliang.ai.aigcplatformserver.bean.GroupCount;
 import space.wenliang.ai.aigcplatformserver.entity.TextChapterEntity;
@@ -12,14 +13,11 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class ATextChapterServiceImpl extends ServiceImpl<TextChapterMapper, TextChapterEntity>
         implements ATextChapterService {
 
     private final TextChapterMapper textChapterMapper;
-
-    public ATextChapterServiceImpl(TextChapterMapper textChapterMapper) {
-        this.textChapterMapper = textChapterMapper;
-    }
 
     @Override
     public void deleteByProjectId(String projectId) {

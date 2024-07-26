@@ -241,4 +241,28 @@ public class TextChapterController {
         return Result.success();
     }
 
+    @PostMapping(value = "addChapterInfo")
+    public Result<Object> addChapterInfo(@RequestBody ChapterInfoEntity chapterInfo) {
+        ChapterInfoEntity chapterInfoEntity = bChapterInfoService.addChapterInfo(chapterInfo);
+        return Result.success(chapterInfoEntity);
+    }
+
+    @PostMapping(value = "chapterInfoSort")
+    public Result<Object> chapterInfoSort(@RequestBody List<ChapterInfoEntity> chapterInfos) {
+        bChapterInfoService.chapterInfoSort(chapterInfos);
+        return Result.success();
+    }
+
+    @PostMapping(value = "addPhoneticAnno")
+    public Result<Object> addPhoneticAnno(@RequestBody AddPhoneticAnno addPhoneticAnno) {
+        bChapterInfoService.addPhoneticAnno(addPhoneticAnno);
+        return Result.success();
+    }
+
+    @PostMapping(value = "removePhoneticAnno")
+    public Result<Object> removePhoneticAnno(@RequestBody AddPhoneticAnno addPhoneticAnno) {
+        bChapterInfoService.removePhoneticAnno(addPhoneticAnno);
+        return Result.success();
+    }
+
 }

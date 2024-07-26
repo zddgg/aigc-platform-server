@@ -1,5 +1,6 @@
 package space.wenliang.ai.aigcplatformserver.service.business.impl;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -22,15 +23,11 @@ import java.util.stream.Stream;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class BGptSovitsModelServiceImpl implements BGptSovitsModelService {
 
     private final PathConfig pathConfig;
     private final AGptSovitsModelService aGptSovitsModelService;
-
-    public BGptSovitsModelServiceImpl(PathConfig pathConfig, AGptSovitsModelService aGptSovitsModelService) {
-        this.pathConfig = pathConfig;
-        this.aGptSovitsModelService = aGptSovitsModelService;
-    }
 
     @Override
     public List<GptSovitsModelEntity> list() {

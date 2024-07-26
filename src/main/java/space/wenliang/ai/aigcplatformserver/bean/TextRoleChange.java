@@ -6,7 +6,7 @@ import lombok.Data;
 public class TextRoleChange {
     private String projectId;
     private String chapterId;
-    private String chapterInfoId;
+    private Integer chapterInfoId;
     private String formRoleName;
     private String fromRoleType;
     private Boolean changeModel;

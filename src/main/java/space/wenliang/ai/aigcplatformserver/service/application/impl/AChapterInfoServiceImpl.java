@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import io.vavr.Tuple2;
+import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import space.wenliang.ai.aigcplatformserver.bean.GroupCount;
@@ -20,20 +21,18 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class AChapterInfoServiceImpl extends ServiceImpl<ChapterInfoMapper, ChapterInfoEntity>
         implements AChapterInfoService {
 
     private final ChapterInfoMapper chapterInfoMapper;
 
-    public AChapterInfoServiceImpl(ChapterInfoMapper chapterInfoMapper) {
-        this.chapterInfoMapper = chapterInfoMapper;
-    }
-
     @Override
     public List<ChapterInfoEntity> list(String projectId, String chapterId) {
         return this.list(new LambdaQueryWrapper<ChapterInfoEntity>()
                 .eq(ChapterInfoEntity::getProjectId, projectId)
-                .eq(ChapterInfoEntity::getChapterId, chapterId));
+                .eq(ChapterInfoEntity::getChapterId, chapterId)
+                .orderByAsc(ChapterInfoEntity::getSortOrder, ChapterInfoEntity::getId));
     }
 
     @Override

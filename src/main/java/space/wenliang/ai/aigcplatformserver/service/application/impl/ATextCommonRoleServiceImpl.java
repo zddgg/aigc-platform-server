@@ -12,6 +12,7 @@ import java.util.List;
 @Service
 public class ATextCommonRoleServiceImpl extends ServiceImpl<TextCommonRoleMapper, TextCommonRoleEntity>
         implements ATextCommonRoleService {
+
     @Override
     public List<TextCommonRoleEntity> list(String projectId) {
         return super.list(new LambdaQueryWrapper<TextCommonRoleEntity>()
