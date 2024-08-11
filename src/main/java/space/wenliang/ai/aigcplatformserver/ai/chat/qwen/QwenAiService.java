@@ -11,14 +11,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import space.wenliang.ai.aigcplatformserver.ai.chat.IAiService;
-import space.wenliang.ai.aigcplatformserver.entity.ChatModelConfigEntity;
+import space.wenliang.ai.aigcplatformserver.entity.TmServerEntity;
 
 @Slf4j
 @Service("Qwen")
 public class QwenAiService implements IAiService {
 
     @Override
-    public Flux<String> call(ChatModelConfigEntity config, String systemMessage, String userMessage) {
+    public Flux<String> call(TmServerEntity config, String systemMessage, String userMessage) {
         try {
             Generation gen = new Generation();
             GenerationParam generationParam = buildGenerationParam(config, systemMessage, userMessage, false);
@@ -29,7 +29,7 @@ public class QwenAiService implements IAiService {
     }
 
     @Override
-    public Flux<String> stream(ChatModelConfigEntity config, String systemMessage, String userMessage) {
+    public Flux<String> stream(TmServerEntity config, String systemMessage, String userMessage) {
         try {
             Generation gen = new Generation();
             GenerationParam generationParam = buildGenerationParam(config, systemMessage, userMessage, true);
@@ -41,7 +41,7 @@ public class QwenAiService implements IAiService {
         }
     }
 
-    public GenerationParam buildGenerationParam(ChatModelConfigEntity config, String systemMessage, String userMessage, boolean stream) {
+    public GenerationParam buildGenerationParam(TmServerEntity config, String systemMessage, String userMessage, boolean stream) {
         MessageManager msgManager = new MessageManager(10);
         Message systemMsg =
                 Message.builder().role(Role.SYSTEM.getValue()).content(systemMessage).build();

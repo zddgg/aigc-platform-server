@@ -22,12 +22,12 @@ public class AiResult {
     public static class Role {
         private String role;
         private String gender;
-        private String ageGroup;
+        private String age;
 
         public Role(String role) {
             this.role = role;
             this.gender = "未知";
-            this.ageGroup = "未知";
+            this.age = "未知";
         }
     }
 
@@ -37,14 +37,6 @@ public class AiResult {
     public static class LinesMapping {
         private String linesIndex;
         private String role;
-        private String gender;
-        private String ageGroup;
         private String mood;
-
-        public LinesMapping(String linesIndex, String role, String mood) {
-            this.linesIndex = linesIndex;
-            this.role = role;
-            this.mood = mood;
-        }
     }
 }

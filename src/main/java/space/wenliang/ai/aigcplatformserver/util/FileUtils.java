@@ -1,5 +1,6 @@
 package space.wenliang.ai.aigcplatformserver.util;
 
+import com.alibaba.fastjson2.JSON;
 import org.mozilla.universalchardet.UniversalDetector;
 
 import java.io.BufferedInputStream;
@@ -12,6 +13,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 public class FileUtils {
 
@@ -77,5 +81,49 @@ public class FileUtils {
                 .replace("|", "")
                 .replace("--", "-")
                 ;
+    }
+
+    public static <T> T getObjectFromFile(Path path, Class<T> aClass) {
+        try {
+            if (Files.exists(path)) {
+                return JSON.parseObject(Optional.ofNullable(Files.readString(path)).orElse("[]"), aClass);
+            }
+            return aClass.getDeclaredConstructor().newInstance();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static <T> List<T> getListFromFile(Path path, Class<T> aClass) {
+        try {
+            if (Files.exists(path)) {
+                return JSON.parseArray(Optional.ofNullable(Files.readString(path)).orElse("[]"), aClass);
+            }
+            return new ArrayList<>();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void openFolder(Path path) throws IOException {
+        String os = System.getProperty("os.name").toLowerCase();
+
+        if (Files.notExists(path) || !Files.isDirectory(path)) {
+            throw new IllegalArgumentException("路径无效或不是目录：" + path);
+        }
+
+        ProcessBuilder processBuilder = null;
+
+        if (os.contains("win")) {
+            processBuilder = new ProcessBuilder("explorer", path.toAbsolutePath().toString());
+        } else if (os.contains("mac")) {
+            processBuilder = new ProcessBuilder("open", path.toAbsolutePath().toString());
+        } else if (os.contains("nix") || os.contains("nux")) {
+            processBuilder = new ProcessBuilder("xdg-open", path.toAbsolutePath().toString());
+        } else {
+            throw new UnsupportedOperationException("不支持的操作系统：" + os);
+        }
+
+        processBuilder.start();
     }
 }

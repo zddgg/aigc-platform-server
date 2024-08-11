@@ -1,104 +1,80 @@
 package space.wenliang.ai.aigcplatformserver.ai.audio.creator;
 
+import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONObject;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestTemplate;
 import space.wenliang.ai.aigcplatformserver.ai.audio.AudioContext;
-import space.wenliang.ai.aigcplatformserver.config.PathConfig;
-import space.wenliang.ai.aigcplatformserver.entity.GptSovitsConfigEntity;
-import space.wenliang.ai.aigcplatformserver.entity.GptSovitsModelEntity;
-import space.wenliang.ai.aigcplatformserver.entity.RefAudioEntity;
+import space.wenliang.ai.aigcplatformserver.config.EnvConfig;
 import space.wenliang.ai.aigcplatformserver.exception.BizException;
-import space.wenliang.ai.aigcplatformserver.util.PathWrapperUtils;
+import space.wenliang.ai.aigcplatformserver.service.cache.PinyinCacheService;
 
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
+
+import static space.wenliang.ai.aigcplatformserver.common.CommonConstants.prompt_audio;
 
 @Slf4j
 @Service("gpt-sovits")
 public class GptSovitsCreator extends AbsAudioCreator {
 
-    private final PathConfig pathConfig;
+    private final EnvConfig envConfig;
 
-    private final RestTemplate restTemplate;
-
-    public GptSovitsCreator(RestClient restClient, PathConfig pathConfig, RestTemplate restTemplate) {
-        super(restClient);
-        this.pathConfig = pathConfig;
-        this.restTemplate = restTemplate;
+    public GptSovitsCreator(EnvConfig envConfig,
+                            RestClient restClient,
+                            PinyinCacheService pinyinCacheService) {
+        super(restClient, pinyinCacheService);
+        this.envConfig = envConfig;
     }
 
     @Override
     public Map<String, Object> buildParams(AudioContext context) {
         context.setMediaType("wav");
 
-        RefAudioEntity refAudio = context.getRefAudio();
-        GptSovitsConfigEntity config = context.getGptSovitsConfig();
+        Path audioPath = envConfig.buildModelPath(
+                prompt_audio, context.getAmPaGroup(), context.getAmPaRole(), context.getAmPaMood(), context.getAmPaAudio());
 
-        Path audioPath = pathConfig.buildRmModelPath(
-                "ref-audio", refAudio.getAudioGroup(), refAudio.getAudioName(), refAudio.getMoodName(), refAudio.getMoodAudioName());
-
-        String refAudioPath = PathWrapperUtils.getAbsolutePath(audioPath, pathConfig.hasRemotePlatForm());
-
+        String refAudioPathStr = audioPath.toAbsolutePath().toString();
 
         Map<String, Object> params = new HashMap<>();
 
-        if (StringUtils.equalsIgnoreCase(context.getAudioServerConfig().getApiVersion(), "v1")) {
-            params.put("text", context.getText());
+        if (StringUtils.equalsIgnoreCase(context.getAmServer().getApiVersion(), "v1")) {
+            params.put("text", context.getMarkupText());
             params.put("text_language", Optional.ofNullable(context.getTextLang()).orElse("zh"));
 
-            params.put("refer_wav_path", refAudioPath);
-            params.put("prompt_text", refAudio.getMoodAudioText());
-            params.put("prompt_language", Optional.ofNullable(refAudio.getLanguage()).orElse("zh"));
+            params.put("refer_wav_path", refAudioPathStr);
+            params.put("prompt_text", context.getAmPaAudioText());
+            params.put("prompt_language", Optional.ofNullable(context.getAmPaAudioLang()).orElse("zh"));
 
         }
 
-        if (StringUtils.equalsIgnoreCase(context.getAudioServerConfig().getApiVersion(), "v2")) {
+        if (StringUtils.equalsIgnoreCase(context.getAmServer().getApiVersion(), "v2")) {
 
-            params.put("text", context.getText());
-            params.put("text_lang", Optional.ofNullable(context.getTextLang()).orElse("zh"));
+            params.put("text", context.getMarkupText());
+            params.put("text_language", Optional.ofNullable(context.getTextLang()).orElse("zh"));
 
-            params.put("ref_audio_path", refAudioPath);
-            params.put("prompt_text", refAudio.getMoodAudioText());
-            params.put("prompt_lang", Optional.ofNullable(refAudio.getLanguage()).orElse("zh"));
+            params.put("refer_wav_path", refAudioPathStr);
+            params.put("prompt_text", context.getAmPaAudioText());
+            params.put("prompt_language", Optional.ofNullable(context.getAmPaAudioLang()).orElse("zh"));
 
-            if (Objects.nonNull(config)) {
-                if (Objects.nonNull(config.getTopK())) {
-                    params.put("top_k", config.getTopK());
-                }
-                if (Objects.nonNull(config.getTopP())) {
-                    params.put("top_p", config.getTopP());
-                }
-                if (Objects.nonNull(config.getTemperature())) {
-                    params.put("temperature", config.getTemperature());
-                }
-                if (Objects.nonNull(config.getTextSplitMethod())) {
-                    params.put("text_split_method", config.getTextSplitMethod());
-                }
-                if (Objects.nonNull(config.getSplitBucket())) {
-                    params.put("split_bucket", config.getSplitBucket());
-                }
-                if (Objects.nonNull(config.getSpeedFactor())) {
-                    params.put("speed_factor", config.getSpeedFactor());
-                }
-                if (Objects.nonNull(config.getFragmentInterval())) {
-                    params.put("fragment_interval", config.getFragmentInterval());
-                }
-                if (Objects.nonNull(config.getSeed())) {
-                    params.put("seed", config.getSeed());
-                }
-                if (Objects.nonNull(config.getParallelInfer())) {
-                    params.put("parallel_infer", config.getParallelInfer());
-                }
-                if (Objects.nonNull(config.getRepetitionPenalty())) {
-                    params.put("repetition_penalty", config.getRepetitionPenalty());
-                }
+            JSONObject config = JSON.parseObject(context.getAmMcParamsJson());
+
+            if (Objects.nonNull(config) && !StringUtils.equals(context.getAmMcId(), "-1")) {
+
+                Map<String, Object> filterConfig = config.entrySet().stream()
+                        .filter((e) -> e.getValue() != null)
+                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+                params.putAll(filterConfig);
             }
         }
 
@@ -108,35 +84,45 @@ public class GptSovitsCreator extends AbsAudioCreator {
     @Override
     public void pre(AudioContext context) {
 
-        if (StringUtils.equalsIgnoreCase(context.getAudioServerConfig().getApiVersion(), "v2")) {
-
-            GptSovitsModelEntity model = context.getGptSovitsModel();
-
+        if (StringUtils.equalsIgnoreCase(context.getAmServer().getApiVersion(), "v2")) {
             try {
 
-                String host = context.getAudioServerConfig().getHost();
+                String host = context.getAmServer().getHost();
 
-                Path gModelPath = pathConfig.buildModelPath("gpt-sovits", model.getModelGroup(), model.getModelName(), model.getCkpt());
-                String gpt_weights = PathWrapperUtils.getAbsolutePath(gModelPath, pathConfig.hasRemotePlatForm());
+                String gpt_weights = null;
+                String sovits_weights = null;
+                for (JSONObject jsonObject : JSON.parseArray(context.getAmMfJson(), JSONObject.class)) {
+                    String fileType = jsonObject.getString("fileType");
+                    String fileName = jsonObject.getString("fileName");
+                    if (StringUtils.equals(fileType, "ckpt")) {
+                        gpt_weights = envConfig.buildModelPath("gpt-sovits", context.getAmMfGroup(), context.getAmMfRole(), fileName).toAbsolutePath().toString();
+                    }
+                    if (StringUtils.equals(fileType, "pth")) {
+                        sovits_weights = envConfig.buildModelPath("gpt-sovits", context.getAmMfGroup(), context.getAmMfRole(), fileName).toAbsolutePath().toString();
+                    }
+                }
 
-                Path sModelPath = pathConfig.buildModelPath("gpt-sovits", model.getModelGroup(), model.getModelName(), model.getPth());
-                String sovits_weights = PathWrapperUtils.getAbsolutePath(sModelPath, pathConfig.hasRemotePlatForm());
+                if (StringUtils.isNotBlank(gpt_weights) && StringUtils.isNotBlank(sovits_weights)) {
+                    Map<String, String> params = Map.of("gpt_model_path", gpt_weights, "sovits_model_path", sovits_weights);
 
-                log.info("开始切换GptWeights模型, {}", gpt_weights);
-                restTemplate.getForEntity(
-                        host + "/set_gpt_weights?weights_path=" + gpt_weights, String.class);
+                    log.info("开始切换GPT-SoVITS模型, {}", gpt_weights);
 
-                log.info("开始切换SovitsWeights模型, {}", sovits_weights);
-                restTemplate.getForEntity(
-                        host + "/set_sovits_weights?weights_path=" + sovits_weights, String.class
-                );
-                log.info("切换模型成功");
+                    ResponseEntity<String> response = restClient
+                            .post()
+                            .uri(host + "/set_model")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .body(params)
+                            .retrieve()
+                            .toEntity(String.class);
+
+                    log.info("切换GPT-SoVITS模型成功, {}", response.getBody());
+                }
             } catch (ResourceAccessException e) {
-                log.error("切换GptWeights模型失败", e);
-                throw new BizException("音频生成服务连接异常，服务类型：" + context.getType());
+                log.error("切换GPT-SoVITS模型失败", e);
+                throw new BizException("音频生成服务连接异常，服务类型：" + context.getAmType());
             } catch (Exception e) {
-                log.error("切换GptWeights模型失败", e);
-                throw new BizException("create audio failed");
+                log.error("切换GPT-SoVITS模型失败", e);
+                throw new BizException("切换GPT-SoVITS模型失败");
             }
         }
     }

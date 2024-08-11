@@ -42,4 +42,18 @@ public class GlobalWebSocketHandler extends TextWebSocketHandler {
             }
         }
     }
+
+    public void sendSuccessMessage(String title, String message) {
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("type", "success");
+        jsonObject.put("title", title);
+        jsonObject.put("message", message);
+        for (WebSocketSession session : sessions.values()) {
+            try {
+                session.sendMessage(new TextMessage(jsonObject.toJSONString()));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
 }

@@ -10,4 +10,5 @@ import lombok.NoArgsConstructor;
 public class LangDict {
     private String enName;
     private String zhName;
+    private String text;
 }

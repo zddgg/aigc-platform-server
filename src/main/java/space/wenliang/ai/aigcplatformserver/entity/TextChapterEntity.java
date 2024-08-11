@@ -6,31 +6,59 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
+import java.io.Serializable;
+
+/**
+ * @TableName text_chapter
+ */
+@TableName(value = "text_chapter")
 @Data
-@TableName
-public class TextChapterEntity {
-
-    @TableId(type = IdType.AUTO)
+public class TextChapterEntity implements Serializable {
+    @TableField(exist = false)
+    private static final long serialVersionUID = 1L;
+    /**
+     *
+     */
+    @TableId(value = "id", type = IdType.AUTO)
     private Integer id;
-
-    private String projectId;
-
+    /**
+     *
+     */
+    @TableField(value = "chapter_id")
     private String chapterId;
-
+    /**
+     *
+     */
+    @TableField(value = "project_id")
+    private String projectId;
+    /**
+     *
+     */
+    @TableField(value = "chapter_name")
     private String chapterName;
-
+    /**
+     *
+     */
+    @TableField(value = "content")
     private String content;
-
+    /**
+     *
+     */
+    @TableField(value = "dialogue_pattern")
     private String dialoguePattern;
-
+    /**
+     *
+     */
+    @TableField(value = "sort_order")
     private Integer sortOrder;
 
-    @TableField(exist = false)
-    private Long textNum;
 
     @TableField(exist = false)
-    private Long roleNum;
+    private Integer textNum;
 
     @TableField(exist = false)
-    private String stage;
+    private Integer roleNum;
+
+    @TableField(exist = false)
+    private Integer audioTaskState;
 }

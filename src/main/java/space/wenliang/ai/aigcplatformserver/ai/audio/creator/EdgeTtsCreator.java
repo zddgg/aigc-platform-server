@@ -1,29 +1,32 @@
 package space.wenliang.ai.aigcplatformserver.ai.audio.creator;
 
 import com.alibaba.fastjson2.JSON;
-import org.apache.commons.lang3.StringUtils;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import space.wenliang.ai.aigcplatformserver.ai.audio.AudioContext;
 import space.wenliang.ai.aigcplatformserver.bean.EdgeTtsVoice;
-import space.wenliang.ai.aigcplatformserver.entity.AudioServerConfigEntity;
+import space.wenliang.ai.aigcplatformserver.common.ModelTypeEnum;
+import space.wenliang.ai.aigcplatformserver.entity.AmServerEntity;
 import space.wenliang.ai.aigcplatformserver.exception.BizException;
-import space.wenliang.ai.aigcplatformserver.service.application.AAudioServerConfigService;
+import space.wenliang.ai.aigcplatformserver.service.AmServerService;
+import space.wenliang.ai.aigcplatformserver.service.cache.PinyinCacheService;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Objects;
 
 @Service("edge-tts")
 public class EdgeTtsCreator extends AbsAudioCreator {
 
-    private final AAudioServerConfigService aAudioServerConfigService;
+    private final AmServerService amServerService;
 
     public EdgeTtsCreator(RestClient restClient,
-                          AAudioServerConfigService aAudioServerConfigService) {
-        super(restClient);
-        this.aAudioServerConfigService = aAudioServerConfigService;
+                          AmServerService amServerService,
+                          PinyinCacheService pinyinCacheService) {
+        super(restClient, pinyinCacheService);
+        this.amServerService = amServerService;
     }
 
     @Override
@@ -32,31 +35,26 @@ public class EdgeTtsCreator extends AbsAudioCreator {
 
         Map<String, Object> params = new HashMap<>();
 
-        params.put("text", context.getText());
+        params.put("text", context.getMarkupText());
 
-        params.put("voice", context.getEdgeTtsConfig().getShortName());
+        params.put("voice", JSON.parseObject(context.getAmMcParamsJson()).getString("shortName"));
 
         return params;
     }
 
-    public List<EdgeTtsVoice> getEdgeTtsVoices() {
-        Optional<AudioServerConfigEntity> optional = aAudioServerConfigService.list()
-                .stream()
-                .filter(a -> StringUtils.equals(a.getName(), "edge-tts"))
-                .findAny();
+    public List<EdgeTtsVoice> getVoices() {
+        AmServerEntity amServer = amServerService.getOne(new LambdaQueryWrapper<AmServerEntity>()
+                .eq(AmServerEntity::getName, ModelTypeEnum.edge_tts.getName()));
 
-        if (optional.isEmpty()) {
+        if (Objects.isNull(amServer)) {
             throw new BizException("没有找到edge-tts音频服务配置");
         }
 
-        String host = optional.get().getHost();
-
         String body = super.restClient
                 .post()
-                .uri(host + "/voices")
+                .uri(amServer.getHost() + "/voices")
                 .retrieve()
                 .body(String.class);
-        System.out.println(body);
         return JSON.parseArray(body, EdgeTtsVoice.class);
     }
 }

@@ -1,82 +1,121 @@
 package space.wenliang.ai.aigcplatformserver.entity;
 
+import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import lombok.Getter;
-import lombok.Setter;
-import space.wenliang.ai.aigcplatformserver.bean.AudioModelConfigExt;
+import lombok.Data;
+import space.wenliang.ai.aigcplatformserver.bean.TextMarkupInfo;
 
+import java.io.Serializable;
 import java.util.Objects;
 
-@Getter
-@Setter
-@TableName
-public class ChapterInfoEntity extends AudioModelConfigExt {
-
-    public static final int init = 0;
-    public static final int created = 1;
-    public static final int modified = 2;
-
-    @TableId(type = IdType.AUTO)
-    private Integer id;
-
-    private String projectId;
-
-    private String chapterId;
-
-    private Integer paragraphIndex;
-
-    private Integer splitIndex;
-
-    private Integer sentenceIndex;
-
-    private String text;
-
-    private String textLang;
-
-    private Boolean dialogueFlag;
-
-    private String role;
-
-    private String audioModelType;
-    private String audioModelId;
-    private String audioConfigId;
-    private String refAudioId;
-
-    private Double audioVolume;
-
-    private Double audioSpeed;
-
-    private Integer nextAudioInterval;
-
-    private Integer audioState;
-
-    private Long audioLength;
-
-    private Boolean audioExportFlag;
-
-    private Integer sortOrder;
-
-    private String phoneticInfo;
-
-    private String audioInstruct;
-
+/**
+ * @TableName chapter_info
+ */
+@TableName(value = "chapter_info")
+@Data
+public class ChapterInfoEntity extends AudioRoleInfo implements Serializable {
     @TableField(exist = false)
-    private String index;
+    private static final long serialVersionUID = 1L;
+    /**
+     *
+     */
+    @TableId(value = "id", type = IdType.AUTO)
+    private Integer id;
+    /**
+     *
+     */
+    @TableField(value = "project_id")
+    private String projectId;
+    /**
+     *
+     */
+    @TableField(value = "chapter_id")
+    private String chapterId;
+    /**
+     *
+     */
+    @TableField(value = "para_index")
+    private Integer paraIndex;
+    /**
+     *
+     */
+    @TableField(value = "sent_index")
+    private Integer sentIndex;
+    /**
+     *
+     */
+    @TableField(value = "text_id")
+    private String textId;
+    /**
+     *
+     */
+    @TableField(value = "text")
+    private String text;
+    /**
+     *
+     */
+    @TableField(value = "text_lang")
+    private String textLang;
+    /**
+     *
+     */
+    @TableField(value = "text_sort")
+    private Integer textSort;
+    /**
+     *
+     */
+    @TableField(value = "dialogue_flag")
+    private Boolean dialogueFlag;
+    /**
+     *
+     */
+    @TableField(value = "audio_volume")
+    private Double audioVolume = 1.0;
+    /**
+     *
+     */
+    @TableField(value = "audio_speed")
+    private Double audioSpeed = 1.0;
+    /**
+     *
+     */
+    @TableField(value = "audio_interval")
+    private Integer audioInterval = 300;
+    /**
+     *
+     */
+    @TableField(value = "audio_length")
+    private Long audioLength;
+    /**
+     *
+     */
+    @TableField(value = "audio_files")
+    private String audioFiles;
+    /**
+     *
+     */
+    @TableField(value = "audio_task_state")
+    private Integer audioTaskState;
+    /**
+     *
+     */
+    @TableField(value = "text_markup_info_json")
+    private String textMarkupInfoJson;
 
     public String getIndex() {
-        if (Objects.nonNull(paragraphIndex) && Objects.nonNull(splitIndex) && Objects.nonNull(sentenceIndex)) {
-            return paragraphIndex + "-" + splitIndex + "-" + sentenceIndex;
+        if (Objects.nonNull(paraIndex) && Objects.nonNull(sentIndex)) {
+            return paraIndex + "-" + sentIndex;
         }
         return null;
     }
 
-    public String getSecondIndex() {
-        if (Objects.nonNull(paragraphIndex) && Objects.nonNull(splitIndex)) {
-            return paragraphIndex + "-" + splitIndex;
+    public TextMarkupInfo getTextMarkupInfo() {
+        if (Objects.nonNull(textMarkupInfoJson)) {
+            return JSON.parseObject(textMarkupInfoJson, TextMarkupInfo.class);
         }
-        return null;
+        return new TextMarkupInfo();
     }
 }

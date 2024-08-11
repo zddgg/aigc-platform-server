@@ -4,6 +4,8 @@ import org.springframework.http.ResponseEntity;
 
 public interface IAudioCreator {
 
+    void preCheck(AudioContext context);
+
     void pre(AudioContext context) throws Exception;
 
     ResponseEntity<byte[]> createAudio(AudioContext context);

@@ -1,30 +1,29 @@
 package space.wenliang.ai.aigcplatformserver.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import lombok.Getter;
-import lombok.Setter;
-import space.wenliang.ai.aigcplatformserver.bean.AudioModelConfigExt;
+import lombok.Data;
 
-@Getter
-@Setter
-@TableName
-public class TextCommonRoleEntity extends AudioModelConfigExt {
+import java.io.Serializable;
 
-    @TableId(type = IdType.AUTO)
+/**
+ * @TableName text_common_role
+ */
+@TableName(value = "text_common_role")
+@Data
+public class TextCommonRoleEntity extends AudioRoleInfo implements Serializable {
+    @TableField(exist = false)
+    private static final long serialVersionUID = 1L;
+    /**
+     *
+     */
+    @TableId(value = "id", type = IdType.AUTO)
     private Integer id;
-
+    /**
+     *
+     */
+    @TableField(value = "project_id")
     private String projectId;
-
-    private String role;
-
-    private String gender;
-
-    private String ageGroup;
-
-    private String audioModelType;
-    private String audioModelId;
-    private String audioConfigId;
-    private String refAudioId;
 }

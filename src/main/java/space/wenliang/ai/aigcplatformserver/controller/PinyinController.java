@@ -5,7 +5,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import space.wenliang.ai.aigcplatformserver.common.Result;
-import space.wenliang.ai.aigcplatformserver.service.cache.CacheService;
+import space.wenliang.ai.aigcplatformserver.service.cache.PinyinCacheService;
 
 import java.util.List;
 import java.util.Map;
@@ -15,11 +15,17 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PinyinController {
 
-    private final CacheService cacheService;
+    private final PinyinCacheService pinyinCacheService;
 
     @PostMapping("getPinyinData")
     public Result<Object> getPinyinData() {
-        Map<String, List<String>> textPinyins = cacheService.getTextPinyins();
+        Map<String, List<String>> textPinyins = pinyinCacheService.getTextPinyins();
         return Result.success(textPinyins);
+    }
+
+    @PostMapping("refreshCache")
+    public Result<Object> refreshCache() {
+        pinyinCacheService.refreshCache();
+        return Result.success();
     }
 }

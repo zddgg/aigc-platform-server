@@ -5,7 +5,15 @@ import lombok.Getter;
 @Getter
 public enum CacheEnum {
 
-    PINYIN("pinyin", Long.MAX_VALUE);
+    PINYIN(CacheConstants.PINYIN, Long.MAX_VALUE),
+
+    AM_MODEL_FILE(CacheConstants.AM_MODEL_FILE, Long.MAX_VALUE),
+
+    AM_MODEL_CONFIG(CacheConstants.AM_MODEL_CONFIG, Long.MAX_VALUE),
+
+    AM_PROMPT_AUDIO(CacheConstants.AM_PROMPT_AUDIO, Long.MAX_VALUE),
+
+    ;
 
     public final String name;
 
