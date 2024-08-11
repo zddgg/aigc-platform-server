@@ -83,6 +83,7 @@ public class AmModelConfigServiceImpl extends ServiceImpl<AmModelConfigMapper, A
                     modelConfig.setMcName(v.getShortName());
                     modelConfig.setAmType(ModelTypeEnum.edge_tts.getName());
                     modelConfig.setMcParamsJson(JSON.toJSONString(v));
+                    modelConfig.setShowFlag(false);
                     return modelConfig;
                 })
                 .toList();
