@@ -3,13 +3,16 @@ package space.wenliang.ai.aigcplatformserver.service.cache;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.ResourceUtils;
 import space.wenliang.ai.aigcplatformserver.config.EnvConfig;
 import space.wenliang.ai.aigcplatformserver.hooks.StartHook;
 
-import java.io.File;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -22,6 +25,7 @@ public class PinyinCacheService implements StartHook.StartHookListener {
     public static Map<String, List<String>> pinyinUniHansMap = new HashMap<>();
 
     private final EnvConfig envConfig;
+    private final ResourceLoader resourceLoader;
 
 
     @Override
@@ -50,12 +54,17 @@ public class PinyinCacheService implements StartHook.StartHookListener {
         Map<String, List<String>> result = new HashMap<>();
 
         Path path = Path.of(envConfig.getUserDir(), "unihan-pinyin.txt");
-        List<String> lines;
+        List<String> lines = new ArrayList<>();
         if (Files.exists(path)) {
             lines = Files.readAllLines(path);
         } else {
-            File file = ResourceUtils.getFile("classpath:pinyin/unihan-pinyin.txt");
-            lines = Files.readAllLines(file.toPath());
+            Resource resource = resourceLoader.getResource("classpath:pinyin/unihan-pinyin.txt");
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    lines.add(line);
+                }
+            }
         }
 
         for (String line : lines) {
@@ -88,12 +97,17 @@ public class PinyinCacheService implements StartHook.StartHookListener {
         Map<String, List<String>> result = new TreeMap<>(new PinyinToneComparator());
 
         Path path = Path.of(envConfig.getUserDir(), "pinyin-unihan.txt");
-        List<String> lines;
+        List<String> lines = new ArrayList<>();
         if (Files.exists(path)) {
             lines = Files.readAllLines(path);
         } else {
-            File file = ResourceUtils.getFile("classpath:pinyin/pinyin-unihan.txt");
-            lines = Files.readAllLines(file.toPath());
+            Resource resource = resourceLoader.getResource("classpath:pinyin/pinyin-unihan.txt");
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    lines.add(line);
+                }
+            }
         }
 
         for (String line : lines) {
