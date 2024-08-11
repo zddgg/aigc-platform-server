@@ -34,11 +34,6 @@ mybatis-plus:
 #  configuration:
 #    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
-remote:
-  enable: false
-  platform: unix
-  model-dir: /model
-
 application:
   version: @project.version@
 

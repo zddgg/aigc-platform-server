@@ -1,11 +1,14 @@
 package space.wenliang.ai.aigcplatformserver.controller;
 
+import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import space.wenliang.ai.aigcplatformserver.bean.FormatTextProject;
 import space.wenliang.ai.aigcplatformserver.bean.TextProject;
 import space.wenliang.ai.aigcplatformserver.common.Result;
 import space.wenliang.ai.aigcplatformserver.entity.TextProjectEntity;
+import space.wenliang.ai.aigcplatformserver.service.TextProjectService;
 import space.wenliang.ai.aigcplatformserver.service.business.BTextProjectService;
 import space.wenliang.ai.aigcplatformserver.spring.annotation.SingleValueParam;
 import space.wenliang.ai.aigcplatformserver.util.FileUtils;
@@ -18,24 +21,28 @@ import java.util.List;
 
 @RestController
 @RequestMapping("textProject")
+@RequiredArgsConstructor
 public class TextProjectController {
 
+    private final TextProjectService textProjectService;
     private final BTextProjectService bTextProjectService;
 
-    public TextProjectController(BTextProjectService bTextProjectService) {
-        this.bTextProjectService = bTextProjectService;
-    }
-
-    @PostMapping("list")
-    public Result<List<TextProject>> create() {
-        List<TextProject> list = bTextProjectService.list();
+    @PostMapping("projectList")
+    public Result<Object> projectList() {
+        List<TextProject> list = bTextProjectService.projectList();
         return Result.success(list);
     }
 
-    @PostMapping("create")
-    public Result<Object> create(@RequestParam("project") String project,
-                                 @RequestParam("projectType") String projectType,
-                                 @RequestParam("file") MultipartFile file) throws IOException {
+    @PostMapping("getTextProject")
+    public Result<Object> getTextProject(@SingleValueParam("projectId") String projectId) {
+        TextProjectEntity textProject = bTextProjectService.getByProjectId(projectId);
+        return Result.success(textProject);
+    }
+
+    @PostMapping("createProject")
+    public Result<Object> createProject(@RequestParam("project") String project,
+                                        @RequestParam("projectType") String projectType,
+                                        @RequestParam("file") MultipartFile file) throws IOException {
 
         Charset charset = FileUtils.detectCharset(file.getBytes());
 
@@ -49,20 +56,26 @@ public class TextProjectController {
                 }
             }
         }
-        bTextProjectService.create(project, projectType, content.toString());
+        bTextProjectService.createProject(project, projectType, content.toString());
+        return Result.success();
+    }
+
+    @PostMapping("createFormatTextProject")
+    public Result<Object> createFormatTextProject(@RequestBody FormatTextProject project) {
+        bTextProjectService.createFormatTextProject(project);
+        return Result.success();
+    }
+
+    @PostMapping("updateProject")
+    public Result<Object> updateProject(@RequestBody TextProjectEntity textProjectEntity) throws IOException {
+        bTextProjectService.updateProject(textProjectEntity);
         return Result.success();
     }
 
 
-    @PostMapping("update")
-    public Result<Object> update(@RequestBody TextProjectEntity textProjectEntity) throws IOException {
-        bTextProjectService.update(textProjectEntity);
-        return Result.success();
-    }
-
-    @PostMapping("delete")
-    public Result<Object> delete(@RequestBody TextProjectEntity textProjectEntity) throws IOException {
-        bTextProjectService.delete(textProjectEntity);
+    @PostMapping("deleteProject")
+    public Result<Object> deleteProject(@RequestBody TextProjectEntity textProjectEntity) throws IOException {
+        bTextProjectService.deleteProject(textProjectEntity);
         return Result.success();
     }
 

@@ -1,7 +1,10 @@
 package space.wenliang.ai.aigcplatformserver.controller;
 
 import io.vavr.Tuple2;
+import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.http.ResponseEntity;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -9,30 +12,39 @@ import org.springframework.web.bind.annotation.RestController;
 import space.wenliang.ai.aigcplatformserver.bean.*;
 import space.wenliang.ai.aigcplatformserver.common.Page;
 import space.wenliang.ai.aigcplatformserver.common.Result;
-import space.wenliang.ai.aigcplatformserver.entity.ChapterInfoEntity;
-import space.wenliang.ai.aigcplatformserver.entity.TextChapterEntity;
-import space.wenliang.ai.aigcplatformserver.entity.TextCommonRoleEntity;
-import space.wenliang.ai.aigcplatformserver.entity.TextRoleEntity;
+import space.wenliang.ai.aigcplatformserver.config.EnvConfig;
+import space.wenliang.ai.aigcplatformserver.entity.*;
+import space.wenliang.ai.aigcplatformserver.service.ChapterInfoService;
+import space.wenliang.ai.aigcplatformserver.service.TextChapterService;
+import space.wenliang.ai.aigcplatformserver.service.TextProjectService;
 import space.wenliang.ai.aigcplatformserver.service.business.BChapterInfoService;
 import space.wenliang.ai.aigcplatformserver.service.business.BTextChapterService;
+import space.wenliang.ai.aigcplatformserver.service.cache.GlobalSettingService;
 import space.wenliang.ai.aigcplatformserver.spring.annotation.SingleValueParam;
+import space.wenliang.ai.aigcplatformserver.util.AudioUtils;
+import space.wenliang.ai.aigcplatformserver.util.FileUtils;
+import space.wenliang.ai.aigcplatformserver.util.SubtitleUtils;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("textChapter")
+@RequiredArgsConstructor
 public class TextChapterController {
 
+    private final EnvConfig envConfig;
+    private final TextChapterService textChapterService;
+    private final TextProjectService textProjectService;
+    private final ChapterInfoService chapterInfoService;
     private final BTextChapterService bTextChapterService;
     private final BChapterInfoService bChapterInfoService;
-
-    public TextChapterController(BTextChapterService bTextChapterService,
-                                 BChapterInfoService bChapterInfoService) {
-        this.bTextChapterService = bTextChapterService;
-        this.bChapterInfoService = bChapterInfoService;
-    }
+    private final GlobalSettingService globalSettingService;
 
     @PostMapping("pageChapters")
     public Result<Object> pageChapters(@RequestBody ProjectQuery projectQuery) {
@@ -55,7 +67,11 @@ public class TextChapterController {
     @PostMapping("getTextChapter")
     public Result<Object> getContent(@SingleValueParam("projectId") String projectId,
                                      @SingleValueParam("chapterId") String chapterId) {
-        TextChapterEntity textChapter = bTextChapterService.getTextChapterAndContent(projectId, chapterId);
+        TextChapterEntity textChapter = textChapterService.getTextChapterAndContent(projectId, chapterId);
+        if (Objects.nonNull(textChapter)) {
+            Map<String, Integer> chapterExportCount = chapterInfoService.chapterExportCount();
+            textChapter.setAudioTaskState(chapterExportCount.get(chapterId));
+        }
         return Result.success(textChapter);
     }
 
@@ -94,22 +110,27 @@ public class TextChapterController {
         return Result.success(list);
     }
 
-    @PostMapping("roles")
-    public Result<Object> roles(@SingleValueParam("projectId") String projectId,
-                                @SingleValueParam("chapterId") String chapterId) {
-        List<TextRoleEntity> list = bTextChapterService.roles(projectId, chapterId);
-        return Result.success(list);
+    @PostMapping("chapterInfoSort")
+    public Result<Object> chapterInfoSort(@RequestBody List<ChapterInfoEntity> chapterInfoEntities) {
+        bChapterInfoService.chapterInfoSort(chapterInfoEntities);
+        return Result.success();
     }
 
-    @PostMapping("updateRoleName")
-    public Result<Object> updateRoleName(@RequestBody TextRoleEntity textRoleEntity) {
-        bTextChapterService.updateRoleName(textRoleEntity);
-        return Result.success();
+    @PostMapping("roles")
+    public Result<Object> roles(@SingleValueParam("chapterId") String chapterId) {
+        List<TextRoleEntity> list = bTextChapterService.roles(chapterId);
+        return Result.success(list);
     }
 
     @PostMapping("updateRole")
     public Result<Object> updateRole(@RequestBody TextRoleEntity textRoleEntity) {
         bTextChapterService.updateRole(textRoleEntity);
+        return Result.success();
+    }
+
+    @PostMapping("updateRoleModel")
+    public Result<Object> updateRoleModel(@RequestBody UpdateModelInfo updateModelInfo) {
+        bTextChapterService.updateRoleModel(updateModelInfo);
         return Result.success();
     }
 
@@ -147,8 +168,8 @@ public class TextChapterController {
     }
 
     @PostMapping("updateCommonRole")
-    public Result<Object> updateCommonRole(@RequestBody TextCommonRoleEntity textCommonRoleEntity) {
-        bTextChapterService.updateCommonRole(textCommonRoleEntity);
+    public Result<Object> updateCommonRole(@RequestBody UpdateModelInfo updateModelInfo) {
+        bTextChapterService.updateCommonRole(updateModelInfo);
         return Result.success();
     }
 
@@ -172,8 +193,8 @@ public class TextChapterController {
     }
 
     @PostMapping(value = "audioModelChange")
-    public Result<Object> audioModelChange(@RequestBody ChapterInfoEntity chapterInfoEntity) {
-        bChapterInfoService.audioModelChange(chapterInfoEntity);
+    public Result<Object> audioModelChange(@RequestBody UpdateModelInfo updateModelInfo) {
+        bChapterInfoService.audioModelChange(updateModelInfo);
         return Result.success();
     }
 
@@ -236,9 +257,139 @@ public class TextChapterController {
     }
 
     @PostMapping(value = "chapterExpose")
-    public Result<Object> chapterExpose(@RequestBody ChapterExpose chapterExpose) {
+    public Result<Object> chapterExpose(@RequestBody ChapterExpose chapterExpose) throws Exception {
         bTextChapterService.chapterExpose(chapterExpose);
         return Result.success();
     }
 
+    @PostMapping(value = "addChapterInfo")
+    public Result<Object> addChapterInfo(@RequestBody ChapterInfoEntity chapterInfo) {
+        ChapterInfoEntity chapterInfoEntity = bChapterInfoService.addChapterInfo(chapterInfo);
+        return Result.success(chapterInfoEntity);
+    }
+
+    @PostMapping("playAudio")
+    public ResponseEntity<byte[]> playAudio(@RequestBody ChapterInfoEntity chapterInfoEntity) throws Exception {
+
+        ChapterInfoEntity chapterInfo = chapterInfoService.getById(chapterInfoEntity.getId());
+
+        TextProjectEntity textProject = textProjectService.getByProjectId(chapterInfo.getProjectId());
+        TextChapterEntity textChapter = textChapterService.getByChapterId(chapterInfo.getChapterId());
+
+        Boolean subtitleOptimize = globalSettingService.getGlobalSetting().getSubtitleOptimize();
+
+        List<String> subtitles = SubtitleUtils.subtitleSplit(chapterInfo.getText(), subtitleOptimize);
+
+        String[] audioNames = chapterInfo.getAudioFiles().split(",");
+
+        if (CollectionUtils.isEmpty(subtitles) || subtitles.size() != audioNames.length) {
+            return null;
+        }
+
+        List<AudioSegment> audioSegments = new ArrayList<>();
+
+        for (int i = 0; i < audioNames.length; i++) {
+
+            AudioSegment subAudioSegment = new AudioSegment();
+            subAudioSegment.setId(chapterInfo.getId());
+            subAudioSegment.setPart(i);
+            subAudioSegment.setAudioName(audioNames[i]);
+            subAudioSegment.setText(subtitles.get(i));
+            subAudioSegment.setAudioVolume(chapterInfo.getAudioVolume());
+            subAudioSegment.setAudioSpeed(chapterInfo.getAudioSpeed());
+
+            if (i == audioNames.length - 1) {
+                subAudioSegment.setAudioInterval(chapterInfo.getAudioInterval());
+            } else {
+                subAudioSegment.setAudioInterval(300);
+            }
+
+            Path subPath = envConfig.buildProjectPath(
+                    "text",
+                    FileUtils.fileNameFormat(textProject.getProjectName()),
+                    FileUtils.fileNameFormat(textChapter.getChapterName()),
+                    "audio",
+                    audioNames[i]);
+
+            subAudioSegment.setAudioPath(subPath.toAbsolutePath().toString());
+
+            audioSegments.add(subAudioSegment);
+        }
+
+        if (!CollectionUtils.isEmpty(audioSegments)) {
+            Path path = envConfig.buildProjectPath(
+                    "text",
+                    FileUtils.fileNameFormat(textProject.getProjectName()),
+                    FileUtils.fileNameFormat(textChapter.getChapterName()),
+                    "audio",
+                    chapterInfo.getIndex() + ".wav");
+
+            if (Files.notExists(path.getParent())) {
+                Files.createDirectories(path.getParent());
+            }
+            AudioUtils.mergeAudioFiles(audioSegments, path.toAbsolutePath().toString());
+            return ResponseEntity.ok().body(Files.readAllBytes(path));
+        }
+        return ResponseEntity.ok().body(null);
+    }
+
+    @PostMapping(value = "chapterCondition")
+    public Result<Object> chapterCondition(@SingleValueParam("projectId") String projectId,
+                                           @SingleValueParam("chapterId") String chapterId) {
+        List<ChapterInfoEntity> chapterInfos = bChapterInfoService.chapterCondition(projectId, chapterId);
+        return Result.success(chapterInfos);
+    }
+
+    @PostMapping(value = "getChapterAudio")
+    public ResponseEntity<byte[]> getChapterAudio(@SingleValueParam("projectId") String projectId,
+                                                  @SingleValueParam("chapterId") String chapterId) throws IOException {
+
+        TextProjectEntity textProject = textProjectService.getByProjectId(projectId);
+        TextChapterEntity textChapter = textChapterService.getByChapterId(chapterId);
+
+        Path audioPath = envConfig.buildProjectPath(
+                "text",
+                FileUtils.fileNameFormat(textProject.getProjectName()),
+                FileUtils.fileNameFormat(textChapter.getChapterName()),
+                "output.wav");
+
+        if (Files.exists(audioPath)) {
+            return ResponseEntity.ok().body(Files.readAllBytes(audioPath));
+        }
+
+        return ResponseEntity.ok().body(null);
+    }
+
+    @PostMapping(value = "getChapterSubtitle")
+    public Result<Object> getChapterSubtitle(@SingleValueParam("projectId") String projectId,
+                                             @SingleValueParam("chapterId") String chapterId) throws IOException {
+
+        TextProjectEntity textProject = textProjectService.getByProjectId(projectId);
+        TextChapterEntity textChapter = textChapterService.getByChapterId(chapterId);
+
+        Path srtPath = envConfig.buildProjectPath(
+                "text",
+                FileUtils.fileNameFormat(textProject.getProjectName()),
+                FileUtils.fileNameFormat(textChapter.getChapterName()),
+                "output.srt");
+
+        List<Subtitle> subtitles = new ArrayList<>();
+        if (Files.exists(srtPath)) {
+            subtitles = SubtitleUtils.readSrtFile(srtPath);
+        }
+
+        return Result.success(subtitles);
+    }
+
+    @PostMapping(value = "addPolyphonicInfo")
+    public Result<Object> addPolyphonicInfo(@RequestBody PolyphonicParams polyphonicParams) {
+        bChapterInfoService.addPolyphonicInfo(polyphonicParams);
+        return Result.success();
+    }
+
+    @PostMapping(value = "removePolyphonicInfo")
+    public Result<Object> removePolyphonicInfo(@RequestBody PolyphonicParams polyphonicParams) {
+        bChapterInfoService.removePolyphonicInfo(polyphonicParams);
+        return Result.success();
+    }
 }

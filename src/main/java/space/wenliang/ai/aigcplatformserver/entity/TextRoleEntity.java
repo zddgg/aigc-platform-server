@@ -4,45 +4,37 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import lombok.Getter;
-import lombok.Setter;
-import space.wenliang.ai.aigcplatformserver.bean.AudioModelConfigExt;
+import lombok.Data;
 
-@Getter
-@Setter
-@TableName
-public class TextRoleEntity extends AudioModelConfigExt {
+import java.io.Serializable;
 
-    @TableId(type = IdType.AUTO)
+/**
+ * @TableName text_role
+ */
+@TableName(value = "text_role")
+@Data
+public class TextRoleEntity extends AudioRoleInfo implements Serializable {
+    @TableField(exist = false)
+    private static final long serialVersionUID = 1L;
+    /**
+     *
+     */
+    @TableId(value = "id", type = IdType.AUTO)
     private Integer id;
-
+    /**
+     *
+     */
+    @TableField(value = "project_id")
     private String projectId;
-
+    /**
+     *
+     */
+    @TableField(value = "chapter_id")
     private String chapterId;
-
-    private String role;
-
-    private String gender;
-
-    private String ageGroup;
-
-    private String audioModelType;
-    private String audioModelId;
-    private String audioConfigId;
-    private String refAudioId;
 
     @TableField(exist = false)
     private Long roleCount;
 
     @TableField(exist = false)
-    private Boolean cover;
-
-    public void setFromCommonRole(TextCommonRoleEntity textCommonRoleEntity) {
-        this.setGender(textCommonRoleEntity.getGender());
-        this.setAgeGroup(textCommonRoleEntity.getAgeGroup());
-        this.setAudioModelType(textCommonRoleEntity.getAudioModelType());
-        this.setAudioModelId(textCommonRoleEntity.getAudioModelId());
-        this.setAudioConfigId(textCommonRoleEntity.getAudioConfigId());
-        this.setRefAudioId(textCommonRoleEntity.getRefAudioId());
-    }
+    private Boolean coverCommonRole;
 }

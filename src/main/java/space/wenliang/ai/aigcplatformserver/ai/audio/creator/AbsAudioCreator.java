@@ -7,24 +7,59 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import space.wenliang.ai.aigcplatformserver.ai.audio.AudioContext;
 import space.wenliang.ai.aigcplatformserver.ai.audio.IAudioCreator;
+import space.wenliang.ai.aigcplatformserver.bean.PolyphonicInfo;
 import space.wenliang.ai.aigcplatformserver.exception.BizException;
+import space.wenliang.ai.aigcplatformserver.service.cache.PinyinCacheService;
 import space.wenliang.ai.aigcplatformserver.util.AudioUtils;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 @Slf4j
 public abstract class AbsAudioCreator implements IAudioCreator {
 
-    public RestClient restClient;
+    public final RestClient restClient;
+    public final PinyinCacheService pinyinCacheService;
 
-    protected AbsAudioCreator(RestClient restClient) {
+    protected AbsAudioCreator(RestClient restClient,
+                              PinyinCacheService pinyinCacheService) {
         this.restClient = restClient;
+        this.pinyinCacheService = pinyinCacheService;
     }
 
-    public abstract Map<String, Object> buildParams(AudioContext context);
+    public void textMarkup(AudioContext context) {
+        StringBuilder markupText = new StringBuilder(context.getText());
+        if (Objects.nonNull(context.getTextMarkupInfo())) {
+            List<PolyphonicInfo> polyphonicInfos = context.getTextMarkupInfo().getPolyphonicInfos();
+            for (PolyphonicInfo polyphonicInfo : polyphonicInfos) {
+                if (Objects.nonNull(polyphonicInfo.getIndex())
+                        && Objects.nonNull(polyphonicInfo.getMarkup())
+                        && polyphonicInfo.getIndex() >= context.getTextPartIndexStart()
+                        && polyphonicInfo.getIndex() <= context.getTextPartIndexEnd()) {
+                    String uniHan = pinyinCacheService.getUniHanByPinyin(polyphonicInfo.getMarkup());
+                    if (Objects.nonNull(uniHan)) {
+                        markupText.setCharAt(polyphonicInfo.getIndex() - context.getTextPartIndexStart(), uniHan.charAt(0));
+                    }
+                }
+            }
+
+        }
+        context.setMarkupText(markupText.toString());
+    }
+
+    public Map<String, Object> buildParams(AudioContext context) {
+        return Map.of();
+    }
+
+    @Override
+    public void preCheck(AudioContext context) {
+        if (Objects.isNull(context.getAmServer())) {
+            throw new BizException("[" + context.getAmType() + "]类型的api服务没有配置");
+        }
+    }
 
     @Override
     public void pre(AudioContext context) {
@@ -32,6 +67,8 @@ public abstract class AbsAudioCreator implements IAudioCreator {
     }
 
     public ResponseEntity<byte[]> createAudio(AudioContext context) {
+
+        preCheck(context);
 
         pre(context);
 
@@ -45,7 +82,7 @@ public abstract class AbsAudioCreator implements IAudioCreator {
             }
         } catch (ResourceAccessException e) {
             log.error("write exception, context: {}", context, e);
-            throw new BizException("音频生成服务连接异常，服务类型：" + context.getType());
+            throw new BizException("音频生成服务连接异常，服务类型：" + context.getAmType());
         } catch (Exception e) {
             log.error("write exception, context: {}", context, e);
             throw new BizException(e.getMessage());
@@ -54,6 +91,9 @@ public abstract class AbsAudioCreator implements IAudioCreator {
     }
 
     public void createFile(AudioContext context) {
+
+        preCheck(context);
+
         pre(context);
 
         try {
@@ -68,13 +108,14 @@ public abstract class AbsAudioCreator implements IAudioCreator {
                 if (Files.exists(path)) {
                     Files.delete(path);
                 }
-                AudioUtils.wavFormat(response.getBody(), path.toAbsolutePath().toString());
+                byte[] bytes = AudioUtils.audioFormat(response.getBody());
+                Files.write(path, bytes);
                 log.info("write file, context: {}", context);
             }
 
         } catch (ResourceAccessException e) {
             log.error("write exception, context: {}", context, e);
-            throw new BizException("音频生成服务连接异常，服务类型：" + context.getType());
+            throw new BizException("音频生成服务连接异常，服务类型：" + context.getAmType());
         } catch (Exception e) {
             log.error("write exception, context: {}", context, e);
             throw new BizException(e.getMessage());
@@ -87,13 +128,15 @@ public abstract class AbsAudioCreator implements IAudioCreator {
 
     }
 
-    private ResponseEntity<byte[]> creator(AudioContext context) {
+    public ResponseEntity<byte[]> creator(AudioContext context) {
+
+        textMarkup(context);
 
         Map<String, Object> params = buildParams(context);
 
         return restClient
                 .post()
-                .uri(context.getAudioServerConfig().getHost() + context.getAudioServerConfig().getPath())
+                .uri(context.getAmServer().getHost() + context.getAmServer().getPath())
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(params)
                 .retrieve()

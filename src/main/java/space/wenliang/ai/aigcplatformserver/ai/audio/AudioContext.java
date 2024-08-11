@@ -1,34 +1,24 @@
 package space.wenliang.ai.aigcplatformserver.ai.audio;
 
 import lombok.Data;
-import space.wenliang.ai.aigcplatformserver.entity.*;
+import space.wenliang.ai.aigcplatformserver.bean.TextMarkupInfo;
+import space.wenliang.ai.aigcplatformserver.entity.AmServerEntity;
+import space.wenliang.ai.aigcplatformserver.entity.AudioModelInfo;
 
 @Data
-public class AudioContext {
+public class AudioContext extends AudioModelInfo {
 
     private String text;
     private String textLang;
+    private TextMarkupInfo textMarkupInfo;
 
-    private String type;
-    private String modelId;
-    private String configId;
-    private String refAudioId;
+    private Integer textPartIndexStart;
+    private Integer textPartIndexEnd;
+    private String markupText;
 
-    private String mediaType;
+    private String mediaType = "wav";
     private String outputDir;
     private String outputName;
 
-    private AudioServerConfigEntity audioServerConfig;
-
-    private RefAudioEntity refAudio;
-
-    private GptSovitsModelEntity gptSovitsModel;
-    private GptSovitsConfigEntity gptSovitsConfig;
-
-    private FishSpeechModelEntity fishSpeechModel;
-    private FishSpeechConfigEntity fishSpeechConfig;
-
-    private ChatTtsConfigEntity chatTtsConfig;
-
-    private EdgeTtsConfigEntity edgeTtsConfig;
+    private AmServerEntity amServer;
 }

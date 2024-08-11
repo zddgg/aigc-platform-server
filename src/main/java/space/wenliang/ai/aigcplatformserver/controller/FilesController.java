@@ -2,16 +2,22 @@ package space.wenliang.ai.aigcplatformserver.controller;
 
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import space.wenliang.ai.aigcplatformserver.config.PathConfig;
+import org.springframework.web.bind.annotation.*;
+import space.wenliang.ai.aigcplatformserver.bean.OpenFolder;
+import space.wenliang.ai.aigcplatformserver.common.Result;
+import space.wenliang.ai.aigcplatformserver.config.EnvConfig;
+import space.wenliang.ai.aigcplatformserver.entity.TextChapterEntity;
+import space.wenliang.ai.aigcplatformserver.entity.TextProjectEntity;
+import space.wenliang.ai.aigcplatformserver.service.TextChapterService;
+import space.wenliang.ai.aigcplatformserver.service.TextProjectService;
+import space.wenliang.ai.aigcplatformserver.util.FileUtils;
 
+import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -20,24 +26,35 @@ import java.nio.file.Paths;
 @CrossOrigin
 @RestController
 @RequestMapping("/files")
+@RequiredArgsConstructor
 public class FilesController {
 
-    private final PathConfig pathConfig;
+    private final EnvConfig envConfig;
     private final ServletContext servletContext;
-
-    public FilesController(PathConfig pathConfig, ServletContext servletContext) {
-        this.pathConfig = pathConfig;
-        this.servletContext = servletContext;
-    }
+    private final TextProjectService textProjectService;
+    private final TextChapterService textChapterService;
 
     @GetMapping("/model/**")
     public ResponseEntity<Resource> getModelFile(HttpServletRequest request) {
-        return getResourceFile(request, "/files/model/", pathConfig.getModelDir());
+        return getResourceFile(request, "/files/model/", envConfig.getModelDir());
     }
 
     @GetMapping("/project/**")
     public ResponseEntity<Resource> getProjectFile(HttpServletRequest request) {
-        return getResourceFile(request, "/files/project/", pathConfig.getProjectDir());
+        return getResourceFile(request, "/files/project/", envConfig.getProjectDir());
+    }
+
+    @PostMapping("openFolder")
+    public Result<Object> openFolder(@RequestBody OpenFolder openFolder) throws IOException {
+        TextProjectEntity textProject = textProjectService.getByProjectId(openFolder.getProjectId());
+        TextChapterEntity textChapter = textChapterService.getByChapterId(openFolder.getChapterId());
+
+        Path srtPath = envConfig.buildProjectPath(
+                "text",
+                FileUtils.fileNameFormat(textProject.getProjectName()),
+                FileUtils.fileNameFormat(textChapter.getChapterName()));
+        FileUtils.openFolder(srtPath);
+        return Result.success();
     }
 
     public ResponseEntity<Resource> getResourceFile(HttpServletRequest request, String subUrl, String dir) {

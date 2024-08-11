@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import space.wenliang.ai.aigcplatformserver.ai.chat.IAiService;
-import space.wenliang.ai.aigcplatformserver.entity.ChatModelConfigEntity;
+import space.wenliang.ai.aigcplatformserver.entity.TmServerEntity;
 
 import java.util.Map;
 import java.util.Objects;
@@ -27,7 +27,7 @@ public class OpenAiService implements IAiService {
     }
 
     @Override
-    public Flux<String> call(ChatModelConfigEntity config, String systemMessage, String userMessage) {
+    public Flux<String> call(TmServerEntity config, String systemMessage, String userMessage) {
 
         JSONObject request = new JSONObject();
         request.put("model", config.getModel());
@@ -49,7 +49,7 @@ public class OpenAiService implements IAiService {
     }
 
     @Override
-    public Flux<String> stream(ChatModelConfigEntity config, String systemMessage, String userMessage) {
+    public Flux<String> stream(TmServerEntity config, String systemMessage, String userMessage) {
 
         JSONObject request = new JSONObject();
         request.put("model", config.getModel());

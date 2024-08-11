@@ -1,5 +1,6 @@
 package space.wenliang.ai.aigcplatformserver.bean;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import lombok.Getter;
 import lombok.Setter;
 import space.wenliang.ai.aigcplatformserver.entity.TextProjectEntity;
@@ -8,5 +9,6 @@ import space.wenliang.ai.aigcplatformserver.entity.TextProjectEntity;
 @Setter
 public class TextProject extends TextProjectEntity {
 
-    private Long chapterCount;
+    @TableField(exist = false)
+    private Integer chapterCount;
 }

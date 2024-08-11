@@ -35,4 +35,5 @@ build/
 ### project ###
 /model/**
 /project/**
+/config/**
 *.db

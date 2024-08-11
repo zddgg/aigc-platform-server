@@ -1,10 +1,7 @@
 package space.wenliang.ai.aigcplatformserver.service.business;
 
 import reactor.core.publisher.Flux;
-import space.wenliang.ai.aigcplatformserver.bean.ChapterAdd;
-import space.wenliang.ai.aigcplatformserver.bean.ChapterExpose;
-import space.wenliang.ai.aigcplatformserver.bean.ProjectQuery;
-import space.wenliang.ai.aigcplatformserver.bean.TextRoleChange;
+import space.wenliang.ai.aigcplatformserver.bean.*;
 import space.wenliang.ai.aigcplatformserver.common.Page;
 import space.wenliang.ai.aigcplatformserver.entity.ChapterInfoEntity;
 import space.wenliang.ai.aigcplatformserver.entity.TextChapterEntity;
@@ -20,6 +17,8 @@ public interface BTextChapterService {
 
     List<TextChapterEntity> chapters4Sort(String projectId);
 
+    void deleteChapter(TextChapterEntity textChapter) throws IOException;
+
     List<ChapterInfoEntity> tmpDialogueParse(TextChapterEntity textChapter);
 
     void chapterEdit(TextChapterEntity textChapter);
@@ -28,35 +27,31 @@ public interface BTextChapterService {
 
     void chapterSort(List<TextChapterEntity> sortChapters);
 
-    Flux<String> roleInference(String projectId, String chapterId);
+    List<TextRoleEntity> roles(String chapterId);
 
-    Boolean checkRoleInference(String projectId, String chapterId);
+    void updateRole(TextRoleEntity textRoleEntity);
 
-    void loadRoleInference(String projectId, String chapterId);
+    void updateRoleModel(UpdateModelInfo updateModelInfo);
 
-    TextChapterEntity getTextChapterAndContent(String projectId, String chapterId);
+    void roleCombine(String projectId, String chapterId, String fromRoleName, String toRoleName);
 
-    List<TextRoleEntity> roles(String projectId, String chapterId);
+    void textRoleChange(TextRoleChange textRoleChange);
+
+    Boolean saveToCommonRole(TextRoleEntity textRoleEntity);
 
     List<TextCommonRoleEntity> commonRoles(String projectId);
 
     void createCommonRole(TextCommonRoleEntity textCommonRoleEntity);
 
-    void updateCommonRole(TextCommonRoleEntity textCommonRoleEntity);
+    void updateCommonRole(UpdateModelInfo updateModelInfo);
 
     void deleteCommonRole(TextCommonRoleEntity textCommonRoleEntity);
 
-    void updateRoleName(TextRoleEntity textRoleEntity);
+    Object checkRoleInference(String projectId, String chapterId);
 
-    void updateRole(TextRoleEntity textRoleEntity);
+    void loadRoleInference(String projectId, String chapterId);
 
-    void textRoleChange(TextRoleChange textRoleChange);
+    void chapterExpose(ChapterExpose chapterExpose) throws Exception;
 
-    void roleCombine(String projectId, String chapterId, String fromRoleName, String toRoleName);
-
-    void chapterExpose(ChapterExpose chapterExpose);
-
-    void deleteChapter(TextChapterEntity textChapter) throws IOException;
-
-    Boolean saveToCommonRole(TextRoleEntity textRoleEntity);
+    Flux<String> roleInference(String projectId, String chapterId);
 }

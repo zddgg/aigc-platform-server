@@ -13,7 +13,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
 import reactor.core.publisher.Sinks;
 import space.wenliang.ai.aigcplatformserver.ai.chat.IAiService;
-import space.wenliang.ai.aigcplatformserver.entity.ChatModelConfigEntity;
+import space.wenliang.ai.aigcplatformserver.entity.TmServerEntity;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -33,7 +33,7 @@ public class SparkAiService implements IAiService {
     }
 
     @Override
-    public Flux<String> call(ChatModelConfigEntity config, String systemMessage, String userMessage) {
+    public Flux<String> call(TmServerEntity config, String systemMessage, String userMessage) {
         String authUrl = getAuthUrl(config);
 
         StringBuilder output = new StringBuilder();
@@ -66,7 +66,7 @@ public class SparkAiService implements IAiService {
     }
 
     @Override
-    public Flux<String> stream(ChatModelConfigEntity config, String systemMessage, String userMessage) {
+    public Flux<String> stream(TmServerEntity config, String systemMessage, String userMessage) {
         String authUrl = getAuthUrl(config);
 
         String request = buildRequest(config, systemMessage, userMessage);
@@ -96,7 +96,7 @@ public class SparkAiService implements IAiService {
         return sink.asFlux();
     }
 
-    private String buildRequest(ChatModelConfigEntity config, String systemMessage, String userMessage) {
+    private String buildRequest(TmServerEntity config, String systemMessage, String userMessage) {
         JSONObject requestJson = new JSONObject();
 
         JSONObject header = new JSONObject();  // header参数
@@ -127,7 +127,7 @@ public class SparkAiService implements IAiService {
     }
 
     @SneakyThrows
-    public String getAuthUrl(ChatModelConfigEntity config) {
+    public String getAuthUrl(TmServerEntity config) {
 
         String apiKey = config.getApiKey();
         String apiSecret = config.getApiSecret();

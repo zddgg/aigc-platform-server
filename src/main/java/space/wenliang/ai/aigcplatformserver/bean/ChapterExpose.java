@@ -8,7 +8,7 @@ import java.util.List;
 public class ChapterExpose {
     private String projectId;
     private String chapterId;
-    private List<String> indexes;
+    private List<Integer> chapterInfoIds;
     private Boolean combineAudio;
     private Boolean subtitle;
 }
