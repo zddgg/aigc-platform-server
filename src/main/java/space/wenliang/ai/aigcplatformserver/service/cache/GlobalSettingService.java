@@ -40,6 +40,9 @@ public class GlobalSettingService implements StartHook.StartHookListener, Shutdo
     @Override
     public void shutdownHook() throws Exception {
         Path path = envConfig.buildConfigPath("global-setting.json");
+        if (Files.notExists(path.getParent())) {
+            Files.createDirectories(path.getParent());
+        }
         Files.write(path, JSON.toJSONBytes(globalSetting));
     }
 
