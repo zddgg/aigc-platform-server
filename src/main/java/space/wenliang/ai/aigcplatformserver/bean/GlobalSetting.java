@@ -6,4 +6,5 @@ import lombok.Data;
 public class GlobalSetting {
 
     private Boolean subtitleOptimize = true;
+    private Integer subAudioInterval = 300;
 }

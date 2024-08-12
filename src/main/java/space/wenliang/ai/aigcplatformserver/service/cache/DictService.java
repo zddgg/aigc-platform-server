@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import space.wenliang.ai.aigcplatformserver.bean.LangDict;
 import space.wenliang.ai.aigcplatformserver.config.EnvConfig;
 import space.wenliang.ai.aigcplatformserver.hooks.ShutdownHook;
@@ -23,7 +24,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DictService implements StartHook.StartHookListener, ShutdownHook.ShutdownHookListener {
 
-    private static List<LangDict> LANG_DICT_LIST = new ArrayList<>();
+    private static List<LangDict> LANG_DICT_LIST = new ArrayList<>(List.of(
+            new LangDict("zh", "中文", "你好啊，今天又是充满希望的一天。"),
+            new LangDict("en", "英文", "Hello! Today is another day full of hope."),
+            new LangDict("ja", "日文", "こんにちは！今日も希望に満ちた一日です。"),
+            new LangDict("ko", "韩文", "안녕하세요! 오늘도 희망으로 가득 찬 하루입니다.")
+    ));
 
     private final EnvConfig envConfig;
 
@@ -42,8 +48,10 @@ public class DictService implements StartHook.StartHookListener, ShutdownHook.Sh
 
     @Override
     public void shutdownHook() throws IOException {
-        Path path = envConfig.buildConfigPath("lang-dict.json");
-        Files.write(path, JSON.toJSONBytes(LANG_DICT_LIST));
+        if (!CollectionUtils.isEmpty(LANG_DICT_LIST)) {
+            Path path = envConfig.buildConfigPath("lang-dict.json");
+            Files.write(path, JSON.toJSONBytes(LANG_DICT_LIST));
+        }
     }
 
     public List<LangDict> getLangDict() {

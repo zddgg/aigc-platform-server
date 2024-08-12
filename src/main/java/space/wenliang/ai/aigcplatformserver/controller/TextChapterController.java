@@ -301,7 +301,7 @@ public class TextChapterController {
             if (i == audioNames.length - 1) {
                 subAudioSegment.setAudioInterval(chapterInfo.getAudioInterval());
             } else {
-                subAudioSegment.setAudioInterval(300);
+                subAudioSegment.setAudioInterval(globalSettingService.getGlobalSetting().getSubAudioInterval());
             }
 
             Path subPath = envConfig.buildProjectPath(
