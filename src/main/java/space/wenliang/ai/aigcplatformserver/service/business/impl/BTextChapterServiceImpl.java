@@ -52,12 +52,12 @@ public class BTextChapterServiceImpl implements BTextChapterService {
             """;
     static String outputFormat = """
             roles:
-            角色名1,男,青年
-            角色名2,男,青年
+            角色名,男,青年
+            角色名,男,青年
             
             linesMappings:
-            台词序号1,角色名1,高兴
-            台词序号2,角色名2,难过
+            台词序号,角色名,高兴
+            台词序号,角色名,难过
             """;
     static String temp = """
             roles:
@@ -662,7 +662,7 @@ public class BTextChapterServiceImpl implements BTextChapterService {
                         if (i == audioNames.length - 1) {
                             subAudioSegment.setAudioInterval(c.getAudioInterval());
                         } else {
-                            subAudioSegment.setAudioInterval(300);
+                            subAudioSegment.setAudioInterval(globalSettingService.getGlobalSetting().getSubAudioInterval());
                         }
 
                         Path subPath = envConfig.buildProjectPath(
@@ -751,8 +751,8 @@ public class BTextChapterServiceImpl implements BTextChapterService {
         chapterInfos.forEach(lineInfo -> {
             if (Objects.equals(lineInfo.getDialogueFlag(), Boolean.TRUE)) {
                 JSONObject lines = new JSONObject();
-                lines.put("index", lineInfo.getIndex());
-                lines.put("lines", lineInfo.getText());
+                lines.put("台词序号", lineInfo.getIndex());
+                lines.put("台词内容", lineInfo.getText());
                 linesList.add(lines);
             }
         });
@@ -784,7 +784,7 @@ public class BTextChapterServiceImpl implements BTextChapterService {
                 输出格式如下：
                 \{outputFormat}
 
-                台词部分：
+                台词列表部分：
                 \{lines}
 
                 原文部分：
