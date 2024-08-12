@@ -50,6 +50,9 @@ public class DictService implements StartHook.StartHookListener, ShutdownHook.Sh
     public void shutdownHook() throws IOException {
         if (!CollectionUtils.isEmpty(LANG_DICT_LIST)) {
             Path path = envConfig.buildConfigPath("lang-dict.json");
+            if (Files.notExists(path.getParent())) {
+                Files.createDirectories(path.getParent());
+            }
             Files.write(path, JSON.toJSONBytes(LANG_DICT_LIST));
         }
     }
