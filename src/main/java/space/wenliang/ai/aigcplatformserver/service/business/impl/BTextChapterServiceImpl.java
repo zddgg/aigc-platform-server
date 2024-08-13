@@ -1034,8 +1034,8 @@ public class BTextChapterServiceImpl implements BTextChapterService {
                         return roleInferenceEntity;
                     }).toList();
 
-            chapterInfoService.audioModelReset(audioModelResetIds);
             chapterInfoService.updateBatchById(chapterInfos);
+            chapterInfoService.audioModelReset(audioModelResetIds);
 
             textRoleService.deleteByChapterId(chapterId);
             textRoleService.saveBatch(textRoleEntities);
