@@ -1,5 +1,6 @@
 package space.wenliang.ai.aigcplatformserver.controller;
 
+import com.alibaba.fastjson2.JSON;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -45,6 +46,8 @@ public class TmServerController {
                 log.error("读取文本大模型服务模板失败", e);
                 throw new RuntimeException(e);
             }
+        } else {
+            tmServerEntities = JSON.parseArray(textModelServerTemplateStr);
         }
         return Result.success(tmServerEntities);
     }
@@ -75,4 +78,72 @@ public class TmServerController {
 
         return Result.success();
     }
+
+    public static String textModelServerTemplateStr = """
+            [
+              {
+                "templateName": "OpenAI",
+                "interfaceType": "OpenAi",
+                "host": "https://api.openai.com",
+                "path": "/v1/chat/completions",
+                "model": "gpt-3.5-turbo",
+                "temperature": 0.3,
+                "maxTokens": 4096
+              },
+              {
+                "templateName": "Kimi",
+                "interfaceType": "OpenAi",
+                "host": "https://api.moonshot.cn",
+                "path": "/v1/chat/completions",
+                "model": "moonshot-v1-32k",
+                "temperature": 0.3,
+                "maxTokens": 32768
+              },
+              {
+                "templateName": "DeepSeek",
+                "interfaceType": "OpenAi",
+                "host": "https://api.deepseek.com",
+                "path": "/v1/chat/completions",
+                "model": "deepseek-chat",
+                "temperature": 0.3,
+                "maxTokens": 4096
+              },
+              {
+                "templateName": "Ollama",
+                "interfaceType": "OpenAi",
+                "host": "http://127.0.0.1:11434",
+                "path": "/v1/chat/completions",
+                "model": "qwen2:7b",
+                "temperature": 0.3,
+                "maxTokens": 4096
+              },
+              {
+                "templateName": "Glm",
+                "interfaceType": "OpenAi",
+                "host": "https://open.bigmodel.cn",
+                "path": "/api/paas/v4/chat/completions",
+                "model": "glm-4",
+                "temperature": 0.3,
+                "maxTokens": 4096
+              },
+              {
+                "templateName": "Spark",
+                "interfaceType": "Spark",
+                "host": "https://spark-api.xf-yun.com",
+                "path": "/v3.5/chat",
+                "model": "generalv3.5",
+                "temperature": 0.3,
+                "maxTokens": 4096
+              },
+              {
+                "templateName": "Qwen",
+                "interfaceType": "Qwen",
+                "host": "https://dashscope.aliyuncs.com",
+                "path": "/api/v1/services/aigc/text-generation/generation",
+                "model": "qwen-turbo",
+                "temperature": 0.3,
+                "maxTokens": 2000
+              }
+            ]
+            """;
 }

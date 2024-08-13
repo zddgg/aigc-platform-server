@@ -936,6 +936,10 @@ public class BTextChapterServiceImpl implements BTextChapterService {
 
             AiResult aiResult = formatAiResult(aiResultStr);
 
+            if (Objects.isNull(aiResult)) {
+                globalWebSocketHandler.sendErrorMessage("没有接收到文本大模型的消息！");
+            }
+
             aiResult = reCombineAiResult(aiResult);
 
             List<AiResult.Role> roles = aiResult.getRoles();
@@ -973,7 +977,7 @@ public class BTextChapterServiceImpl implements BTextChapterService {
                 if (commonRoleMap.containsKey(role)) {
                     TextCommonRoleEntity commonRole = commonRoleMap.get(role);
                     chapterInfo.setAudioRoleInfo(commonRole);
-                    chapterInfo.setAudioModelInfo(chapterInfo);
+                    chapterInfo.setAudioModelInfo(commonRole);
 
                     if (Objects.nonNull(commonRole.getGender())) {
                         chapterInfo.setGender(commonRole.getGender());
