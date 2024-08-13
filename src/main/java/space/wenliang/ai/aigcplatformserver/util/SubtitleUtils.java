@@ -16,7 +16,6 @@ import java.util.Set;
 public class SubtitleUtils {
 
     private static final int MAX_CHARS_PER_LINE = 15;
-    private static final int MIN_CHARS_PER_LINE = MAX_CHARS_PER_LINE / 3;
     private static final List<Character> PUNCTUATION = List.of('，', '。', '！', '？', '；', '：', ',', '.', '!', '?', ';', ':');
     private static final Set<Character> punctuationSet = new HashSet<>(PUNCTUATION);
 
