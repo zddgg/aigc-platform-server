@@ -119,6 +119,7 @@ public class ChapterInfoServiceImpl extends ServiceImpl<ChapterInfoMapper, Chapt
                 .set(ChapterInfoEntity::getAmMfRole, null)
                 .set(ChapterInfoEntity::getAmMfJson, null)
                 .set(ChapterInfoEntity::getAmMcId, null)
+                .set(ChapterInfoEntity::getAmMcName, null)
                 .set(ChapterInfoEntity::getAmMcParamsJson, null)
                 .in(ChapterInfoEntity::getId, ids));
     }
