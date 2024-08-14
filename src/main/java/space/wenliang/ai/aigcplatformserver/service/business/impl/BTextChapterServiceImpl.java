@@ -1,7 +1,5 @@
 package space.wenliang.ai.aigcplatformserver.service.business.impl;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import io.vavr.Tuple2;
@@ -49,18 +47,19 @@ public class BTextChapterServiceImpl implements BTextChapterService {
             
             3. 严格按照台词文本中的顺序在原文文本中查找。每行台词都做一次处理，不能合并台词。
             4. 分析的台词内容如果不是台词，不要加入到返回结果中。
+            5. 返回结果只能包含角色分析、台词分析两个部分。
             """;
     static String outputFormat = """
-            roles:
+            角色分析:
             角色名,男,青年
             角色名,男,青年
             
-            linesMappings:
+            台词分析:
             台词序号,角色名,高兴
             台词序号,角色名,难过
             """;
     static String temp = """
-            roles:
+            角色分析:
             萧炎,男,青年
             中年男子,男,中年
             少女,女,少年
@@ -68,7 +67,7 @@ public class BTextChapterServiceImpl implements BTextChapterService {
             萧薰儿,女,少年
             观众,未知,未知
             
-            linesMappings:
+            台词分析:
             1-0,萧炎,难过
             3-0,中年男子,中立
             5-0,观众,厌恶
@@ -641,6 +640,10 @@ public class BTextChapterServiceImpl implements BTextChapterService {
 
                     List<String> subtitles = SubtitleUtils.subtitleSplit(c.getText(), subtitleOptimize);
 
+                    if (StringUtils.isBlank(c.getAudioFiles())) {
+                        throw new BizException("[" + c.getIndex() + "]没有找到生成音频文件，请重新生成");
+                    }
+
                     String[] audioNames = c.getAudioFiles().split(",");
 
                     if (CollectionUtils.isEmpty(subtitles) || subtitles.size() != audioNames.length) {
@@ -747,13 +750,10 @@ public class BTextChapterServiceImpl implements BTextChapterService {
 
         List<ChapterInfoEntity> chapterInfos = chapterInfoService.getByChapterId(chapterId);
 
-        List<JSONObject> linesList = new ArrayList<>();
+        List<String> linesList = new ArrayList<>();
         chapterInfos.forEach(lineInfo -> {
             if (Objects.equals(lineInfo.getDialogueFlag(), Boolean.TRUE)) {
-                JSONObject lines = new JSONObject();
-                lines.put("台词序号", lineInfo.getIndex());
-                lines.put("台词内容", lineInfo.getText());
-                linesList.add(lines);
+                linesList.add(lineInfo.getIndex() + ": " + lineInfo.getText());
             }
         });
 
@@ -761,7 +761,7 @@ public class BTextChapterServiceImpl implements BTextChapterService {
             return Flux.empty();
         }
 
-        String lines = JSON.toJSONString(linesList);
+        String lines = String.join("\n", linesList);
         StringBuilder content = new StringBuilder();
 
         chapterInfos.stream()
@@ -784,11 +784,11 @@ public class BTextChapterServiceImpl implements BTextChapterService {
                 输出格式如下：
                 \{outputFormat}
 
-                台词列表部分：
-                \{lines}
-
                 原文部分：
                 \{content.toString()}
+
+                台词部分：
+                \{lines}
                 """;
 
         log.info("\n提示词, systemMessage: {}", systemMessage);
@@ -825,11 +825,11 @@ public class BTextChapterServiceImpl implements BTextChapterService {
                             sbStr.delete(0, newlineIndex + 1);
 
                             if (StringUtils.isNotBlank(line)) {
-                                if (StringUtils.equals("roles:", line)) {
+                                if (StringUtils.equals("角色分析:", line)) {
                                     isMapping.set(false);
                                     continue;
                                 }
-                                if (StringUtils.equals("linesMappings:", line)) {
+                                if (StringUtils.equals("台词分析:", line)) {
                                     isMapping.set(true);
                                     continue;
                                 }
@@ -1057,11 +1057,11 @@ public class BTextChapterServiceImpl implements BTextChapterService {
         List<AiResult.Role> roles = new ArrayList<>();
         List<AiResult.LinesMapping> linesMappings = new ArrayList<>();
         for (String line : text.split("\n")) {
-            if (StringUtils.equals("roles:", line)) {
+            if (StringUtils.equals("角色分析:", line)) {
                 isMapping = false;
                 continue;
             }
-            if (StringUtils.equals("linesMappings:", line)) {
+            if (StringUtils.equals("台词分析:", line)) {
                 isMapping = true;
                 continue;
             }

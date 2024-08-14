@@ -25,60 +25,6 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class TmServerController {
 
-    private final EnvConfig envConfig;
-    private final TmServerService tmServerService;
-
-    @PostMapping("list")
-    public Result<Object> list() {
-        return Result.success(tmServerService.list());
-    }
-
-    @PostMapping("templateList")
-    public Result<Object> templateList() {
-        List<Object> tmServerEntities = new ArrayList<>();
-
-        Path path = envConfig.buildConfigPath("text-model-server-template.json");
-
-        if (Files.exists(path)) {
-            try {
-                tmServerEntities = FileUtils.getListFromFile(path, Object.class);
-            } catch (Exception e) {
-                log.error("读取文本大模型服务模板失败", e);
-                throw new RuntimeException(e);
-            }
-        } else {
-            tmServerEntities = JSON.parseArray(textModelServerTemplateStr);
-        }
-        return Result.success(tmServerEntities);
-    }
-
-    @PostMapping("updateModelChatConfig")
-    public Result<Object> updateModelChatConfig(@RequestBody TmServerEntity tmServerEntity) {
-        tmServerService.saveOrUpdate(tmServerEntity);
-
-        return Result.success();
-    }
-
-    @PostMapping("deleteModelChatConfig")
-    public Result<Object> deleteModelChatConfig(@RequestBody TmServerEntity tmServerEntity) {
-        tmServerService.removeById(tmServerEntity);
-
-        return Result.success();
-    }
-
-    @PostMapping("activeModelChatConfig")
-    public Result<Object> activeModelChatConfig(@RequestBody TmServerEntity tmServerEntity) {
-        List<TmServerEntity> tmServerEntities = tmServerService.list();
-
-        for (TmServerEntity serverEntity : tmServerEntities) {
-            serverEntity.setActive(Objects.equals(tmServerEntity.getId(), serverEntity.getId()));
-        }
-
-        tmServerService.updateBatchById(tmServerEntities);
-
-        return Result.success();
-    }
-
     public static String textModelServerTemplateStr = """
             [
               {
@@ -97,7 +43,7 @@ public class TmServerController {
                 "path": "/v1/chat/completions",
                 "model": "moonshot-v1-32k",
                 "temperature": 0.3,
-                "maxTokens": 32768
+                "maxTokens": 0
               },
               {
                 "templateName": "DeepSeek",
@@ -146,4 +92,57 @@ public class TmServerController {
               }
             ]
             """;
+    private final EnvConfig envConfig;
+    private final TmServerService tmServerService;
+
+    @PostMapping("list")
+    public Result<Object> list() {
+        return Result.success(tmServerService.list());
+    }
+
+    @PostMapping("templateList")
+    public Result<Object> templateList() {
+        List<Object> tmServerEntities;
+
+        Path path = envConfig.buildConfigPath("text-model-server-template.json");
+
+        if (Files.exists(path)) {
+            try {
+                tmServerEntities = FileUtils.getListFromFile(path, Object.class);
+            } catch (Exception e) {
+                log.error("读取文本大模型服务模板失败", e);
+                throw new RuntimeException(e);
+            }
+        } else {
+            tmServerEntities = JSON.parseArray(textModelServerTemplateStr);
+        }
+        return Result.success(tmServerEntities);
+    }
+
+    @PostMapping("updateModelChatConfig")
+    public Result<Object> updateModelChatConfig(@RequestBody TmServerEntity tmServerEntity) {
+        tmServerService.saveOrUpdate(tmServerEntity);
+
+        return Result.success();
+    }
+
+    @PostMapping("deleteModelChatConfig")
+    public Result<Object> deleteModelChatConfig(@RequestBody TmServerEntity tmServerEntity) {
+        tmServerService.removeById(tmServerEntity);
+
+        return Result.success();
+    }
+
+    @PostMapping("activeModelChatConfig")
+    public Result<Object> activeModelChatConfig(@RequestBody TmServerEntity tmServerEntity) {
+        List<TmServerEntity> tmServerEntities = tmServerService.list();
+
+        for (TmServerEntity serverEntity : tmServerEntities) {
+            serverEntity.setActive(Objects.equals(tmServerEntity.getId(), serverEntity.getId()));
+        }
+
+        tmServerService.updateBatchById(tmServerEntities);
+
+        return Result.success();
+    }
 }
