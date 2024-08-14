@@ -5,6 +5,6 @@ import lombok.Data;
 @Data
 public class GlobalSetting {
 
-    private Boolean subtitleOptimize = true;
+    private Boolean subtitleOptimize = false;
     private Integer subAudioInterval = 300;
 }
