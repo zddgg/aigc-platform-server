@@ -167,7 +167,7 @@ public class AmModelConfigController {
                     .body(audioResponse.getBody());
         } catch (Exception e) {
             log.error(e.getMessage(), e);
-            globalWebSocketHandler.sendErrorMessage(e.getMessage());
+            globalWebSocketHandler.sendErrorMessage("音频生成异常", e.getMessage());
             return ResponseEntity.badRequest().body(null);
         }
     }
@@ -259,7 +259,7 @@ public class AmModelConfigController {
                     .body(audioResponse.getBody());
         } catch (Exception e) {
             log.error(e.getMessage(), e);
-            globalWebSocketHandler.sendErrorMessage(e.getMessage());
+            globalWebSocketHandler.sendErrorMessage("音频生成异常", e.getMessage());
             return ResponseEntity.badRequest().body(null);
         }
     }

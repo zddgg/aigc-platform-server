@@ -21,8 +21,8 @@ public class TextRoleServiceImpl extends ServiceImpl<TextRoleMapper, TextRoleEnt
     private final TextRoleMapper textRoleMapper;
 
     @Override
-    public Map<String, Integer> chapterGroupCount() {
-        return textRoleMapper.chapterGroupCount().stream()
+    public Map<String, Integer> chapterRoleGroupCount() {
+        return textRoleMapper.chapterRoleGroupCount().stream()
                 .collect(Collectors.toMap(GroupCount::getGroup1, GroupCount::getCount1));
     }
 

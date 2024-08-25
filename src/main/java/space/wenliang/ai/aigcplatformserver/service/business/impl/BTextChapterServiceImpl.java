@@ -120,15 +120,20 @@ public class BTextChapterServiceImpl implements BTextChapterService {
 
         if (!CollectionUtils.isEmpty(page.getRecords())) {
 
-            Map<String, Integer> chapterTextCount = chapterInfoService.chapterGroupCount();
-            Map<String, Integer> chapterExportCount = chapterInfoService.chapterExportCount();
-            Map<String, Integer> chapterRoleCount = textRoleService.chapterGroupCount();
+            Map<String, ChapterSummary> chapterSummaryMap = chapterInfoService.chapterSummaryMap();
+
+            Map<String, Integer> chapterRoleCount = textRoleService.chapterRoleGroupCount();
 
             List<TextChapterEntity> list = page.getRecords().stream()
                     .peek(t -> {
-                        t.setTextNum(chapterTextCount.get(t.getChapterId()));
+                        ChapterSummary chapterSummary = chapterSummaryMap.get(t.getChapterId());
+                        if (Objects.nonNull(chapterSummary)) {
+                            t.setWordNum(chapterSummary.getWordCount());
+                            t.setTextNum(chapterSummary.getTextCount());
+                            t.setDialogueNum(chapterSummary.getDialogueCount());
+                            t.setAudioTaskState(chapterSummary.getMaxTaskState());
+                        }
                         t.setRoleNum(chapterRoleCount.get(t.getChapterId()));
-                        t.setAudioTaskState(chapterExportCount.get(t.getChapterId()));
                     }).toList();
 
             page.setRecords(list);
@@ -175,6 +180,9 @@ public class BTextChapterServiceImpl implements BTextChapterService {
 
             for (String line : textChapter.getContent().split("\n")) {
                 List<Tuple2<Boolean, String>> chapterInfoTuple2s = ChapterUtils.dialogueSplit(line, dialoguePatterns);
+                if (CollectionUtils.isEmpty(chapterInfoTuple2s)) {
+                    continue;
+                }
 
                 for (Tuple2<Boolean, String> chapterInfoTuple2 : chapterInfoTuple2s) {
 
@@ -874,6 +882,9 @@ public class BTextChapterServiceImpl implements BTextChapterService {
             int sentIndex = 0;
 
             List<Tuple2<Boolean, String>> chapterInfoTuple2s = ChapterUtils.dialogueSplit(line, dialoguePatterns);
+            if (CollectionUtils.isEmpty(chapterInfoTuple2s)) {
+                continue;
+            }
 
             for (Tuple2<Boolean, String> chapterInfoTuple2 : chapterInfoTuple2s) {
 
@@ -937,7 +948,7 @@ public class BTextChapterServiceImpl implements BTextChapterService {
             AiResult aiResult = formatAiResult(aiResultStr);
 
             if (Objects.isNull(aiResult)) {
-                globalWebSocketHandler.sendErrorMessage("没有接收到文本大模型的消息！");
+                globalWebSocketHandler.sendErrorMessage("文本大模型请求异常", "没有接收到文本大模型的消息！");
             }
 
             aiResult = reCombineAiResult(aiResult);

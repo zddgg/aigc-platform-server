@@ -6,8 +6,10 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import io.vavr.Tuple2;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import space.wenliang.ai.aigcplatformserver.bean.GroupCount;
+import org.springframework.util.CollectionUtils;
+import space.wenliang.ai.aigcplatformserver.bean.ChapterSummary;
 import space.wenliang.ai.aigcplatformserver.common.AudioTaskStateConstants;
 import space.wenliang.ai.aigcplatformserver.entity.ChapterInfoEntity;
 import space.wenliang.ai.aigcplatformserver.entity.TextChapterEntity;
@@ -15,10 +17,12 @@ import space.wenliang.ai.aigcplatformserver.mapper.ChapterInfoMapper;
 import space.wenliang.ai.aigcplatformserver.service.ChapterInfoService;
 import space.wenliang.ai.aigcplatformserver.util.ChapterUtils;
 
+import javax.sql.DataSource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,18 +30,25 @@ import java.util.stream.Collectors;
 public class ChapterInfoServiceImpl extends ServiceImpl<ChapterInfoMapper, ChapterInfoEntity>
         implements ChapterInfoService {
 
+    private final DataSource dataSource;
     private final ChapterInfoMapper chapterInfoMapper;
+    @Value("${spring.profiles.active:}")
+    private String activeProfiles;
 
     @Override
-    public Map<String, Integer> chapterGroupCount() {
-        return chapterInfoMapper.chapterGroupCount().stream()
-                .collect(Collectors.toMap(GroupCount::getGroup1, GroupCount::getCount1));
-    }
+    public Map<String, ChapterSummary> chapterSummaryMap() {
+        List<ChapterSummary> chapterSummaries = new ArrayList<>();
 
-    @Override
-    public Map<String, Integer> chapterExportCount() {
-        return chapterInfoMapper.chapterExportCount().stream()
-                .collect(Collectors.toMap(GroupCount::getGroup1, GroupCount::getCount1));
+        if (activeProfiles.contains("mysql")) {
+            chapterSummaries = chapterInfoMapper.chapterSummary4MySQL();
+        }
+        if (activeProfiles.contains("sqlite")) {
+            chapterSummaries = chapterInfoMapper.chapterSummary4SQLite();
+        }
+
+        return chapterSummaries
+                .stream()
+                .collect(Collectors.toMap(ChapterSummary::getChapterId, Function.identity()));
     }
 
     @Override
@@ -72,6 +83,9 @@ public class ChapterInfoServiceImpl extends ServiceImpl<ChapterInfoMapper, Chapt
             int sentIndex = 0;
 
             List<Tuple2<Boolean, String>> chapterInfoTuple2s = ChapterUtils.dialogueSplit(line, dialoguePatterns);
+            if (CollectionUtils.isEmpty(chapterInfoTuple2s)) {
+                continue;
+            }
 
             for (Tuple2<Boolean, String> chapterInfoTuple2 : chapterInfoTuple2s) {
 

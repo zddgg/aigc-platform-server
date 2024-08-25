@@ -8,7 +8,7 @@ import java.util.Map;
 
 public interface TextRoleService extends IService<TextRoleEntity> {
 
-    Map<String, Integer> chapterGroupCount();
+    Map<String, Integer> chapterRoleGroupCount();
 
     void deleteByChapterId(String chapterId);
 

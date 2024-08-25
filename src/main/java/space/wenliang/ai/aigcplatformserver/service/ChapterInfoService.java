@@ -1,6 +1,7 @@
 package space.wenliang.ai.aigcplatformserver.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import space.wenliang.ai.aigcplatformserver.bean.ChapterSummary;
 import space.wenliang.ai.aigcplatformserver.entity.ChapterInfoEntity;
 import space.wenliang.ai.aigcplatformserver.entity.TextChapterEntity;
 
@@ -9,9 +10,7 @@ import java.util.Map;
 
 public interface ChapterInfoService extends IService<ChapterInfoEntity> {
 
-    Map<String, Integer> chapterGroupCount();
-
-    Map<String, Integer> chapterExportCount();
+    Map<String, ChapterSummary> chapterSummaryMap();
 
     void deleteByChapterId(String chapterId);
 

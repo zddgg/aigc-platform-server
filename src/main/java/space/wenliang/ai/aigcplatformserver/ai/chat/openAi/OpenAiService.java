@@ -80,7 +80,7 @@ public class OpenAiService implements IAiService {
                         HttpStatusCode::isError,
                         clientResponse -> clientResponse.bodyToMono(String.class)
                                 .flatMap(errorBody -> {
-                                    globalWebSocketHandler.sendErrorMessage(errorBody);
+                                    globalWebSocketHandler.sendErrorMessage("文本大模型请求异常", errorBody);
                                     return Mono.error(new RuntimeException(errorBody));
                                 })
                 )
@@ -105,7 +105,7 @@ public class OpenAiService implements IAiService {
                             HttpStatusCode::isError,  // 检查状态码是否为错误
                             clientResponse -> clientResponse.bodyToMono(String.class) // 提取错误响应的body
                                     .flatMap(errorBody -> {
-                                        globalWebSocketHandler.sendErrorMessage(errorBody);
+                                        globalWebSocketHandler.sendErrorMessage("文本大模型请求异常", errorBody);
                                         return Mono.error(new RuntimeException(errorBody));
                                     })
                     )

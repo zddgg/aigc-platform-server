@@ -30,9 +30,11 @@ public class GlobalWebSocketHandler extends TextWebSocketHandler {
         log.info("Connection closed with session id: {}", session.getId());
     }
 
-    public void sendErrorMessage(String message) {
+    public void sendErrorMessage(String title, String message) {
         JSONObject jsonObject = new JSONObject();
-        jsonObject.put("type", "error");
+        jsonObject.put("type", "message");
+        jsonObject.put("state", "error");
+        jsonObject.put("title", title);
         jsonObject.put("message", message);
         for (WebSocketSession session : sessions.values()) {
             try {
@@ -45,9 +47,23 @@ public class GlobalWebSocketHandler extends TextWebSocketHandler {
 
     public void sendSuccessMessage(String title, String message) {
         JSONObject jsonObject = new JSONObject();
-        jsonObject.put("type", "success");
+        jsonObject.put("type", "message");
+        jsonObject.put("state", "success");
         jsonObject.put("title", title);
         jsonObject.put("message", message);
+        for (WebSocketSession session : sessions.values()) {
+            try {
+                session.sendMessage(new TextMessage(jsonObject.toJSONString()));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    public void sendEvent(String event) {
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("type", "event");
+        jsonObject.put("event", event);
         for (WebSocketSession session : sessions.values()) {
             try {
                 session.sendMessage(new TextMessage(jsonObject.toJSONString()));

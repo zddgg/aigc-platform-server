@@ -9,8 +9,12 @@ import java.util.List;
 
 public interface TextRoleMapper extends BaseMapper<TextRoleEntity> {
 
-    @Select("select chapter_id as group1, count(*) as count1 from text_role group by chapter_id")
-    List<GroupCount> chapterGroupCount();
+    @Select("""
+            select chapter_id as group1, count(*) as count1
+            from text_role
+            group by chapter_id
+            """)
+    List<GroupCount> chapterRoleGroupCount();
 }
 
 
