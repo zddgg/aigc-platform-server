@@ -73,6 +73,10 @@ public class ChapterUtils {
     }
 
     public static List<Tuple2<Boolean, String>> dialogueSplit(String line, List<String> linesModifiers) {
+        if (StringUtils.isBlank(line)) {
+            return new ArrayList<>();
+        }
+
         List<Tuple2<Boolean, String>> sentences = new ArrayList<>();
 
         if (CollectionUtils.isEmpty(linesModifiers)) {
@@ -83,18 +87,24 @@ public class ChapterUtils {
         int lastIndex = 0;
         while (matcher.find()) {
             if (matcher.start() > lastIndex) {
-                String text = line.substring(lastIndex, matcher.start()).trim();
-                sentences.add(Tuple.of(false, text));
+                String text = line.substring(lastIndex, matcher.start()).trim().stripLeading();
+                if (StringUtils.isNotBlank(text)) {
+                    sentences.add(Tuple.of(false, text));
+                }
             }
 
-            String text = line.substring(matcher.start(), matcher.end()).trim();
-            sentences.add(Tuple.of(true, text.substring(1, text.length() - 1)));
+            String text = line.substring(matcher.start(), matcher.end()).trim().stripLeading();
+            if (StringUtils.isNotBlank(text)) {
+                sentences.add(Tuple.of(true, text.substring(1, text.length() - 1)));
+            }
 
             lastIndex = matcher.end();
         }
         if (lastIndex < line.length()) {
-            String text = line.substring(lastIndex).trim();
-            sentences.add(Tuple.of(false, text));
+            String text = line.substring(lastIndex).trim().stripLeading();
+            if (StringUtils.isNotBlank(text)) {
+                sentences.add(Tuple.of(false, text));
+            }
         }
         return sentences;
     }

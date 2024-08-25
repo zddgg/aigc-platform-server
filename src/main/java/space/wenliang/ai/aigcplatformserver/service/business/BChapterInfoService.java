@@ -1,6 +1,5 @@
 package space.wenliang.ai.aigcplatformserver.service.business;
 
-import io.vavr.Tuple2;
 import space.wenliang.ai.aigcplatformserver.bean.ControlsUpdate;
 import space.wenliang.ai.aigcplatformserver.bean.PolyphonicParams;
 import space.wenliang.ai.aigcplatformserver.bean.UpdateModelInfo;
@@ -28,9 +27,9 @@ public interface BChapterInfoService {
 
     void deleteChapterInfo(ChapterInfoEntity chapterInfoEntity);
 
-    List<String> addAudioCreateTask(ChapterInfoEntity chapterInfoEntity);
+    void addAudioCreateTask(ChapterInfoEntity chapterInfoEntity);
 
-    Tuple2<Integer, List<String>> startCreateAudio(String projectId, String chapterId, String actionType);
+    void startCreateAudio(String projectId, String chapterId, String actionType);
 
     void stopCreateAudio();
 

@@ -1,6 +1,5 @@
 package space.wenliang.ai.aigcplatformserver.controller;
 
-import io.vavr.Tuple2;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.ResponseEntity;
@@ -69,8 +68,11 @@ public class TextChapterController {
                                      @SingleValueParam("chapterId") String chapterId) {
         TextChapterEntity textChapter = textChapterService.getTextChapterAndContent(projectId, chapterId);
         if (Objects.nonNull(textChapter)) {
-            Map<String, Integer> chapterExportCount = chapterInfoService.chapterExportCount();
-            textChapter.setAudioTaskState(chapterExportCount.get(chapterId));
+            Map<String, ChapterSummary> chapterSummaryMap = chapterInfoService.chapterSummaryMap();
+            ChapterSummary chapterSummary = chapterSummaryMap.get(chapterId);
+            if (Objects.nonNull(chapterSummary)) {
+                textChapter.setAudioTaskState(chapterSummary.getMaxTaskState());
+            }
         }
         return Result.success(textChapter);
     }
@@ -235,19 +237,17 @@ public class TextChapterController {
     }
 
     @PostMapping(value = "createAudio")
-    public Result<List<String>> createAudio(@RequestBody ChapterInfoEntity chapterInfoEntity) {
-        List<String> creatingIds = bChapterInfoService.addAudioCreateTask(chapterInfoEntity);
-
-        return Result.success(creatingIds).setMsg("提交任务数：1");
+    public Result<Object> createAudio(@RequestBody ChapterInfoEntity chapterInfoEntity) {
+        bChapterInfoService.addAudioCreateTask(chapterInfoEntity);
+        return Result.success();
     }
 
     @PostMapping(value = "startCreateAudio")
-    public Result<List<String>> startCreateAudio(@SingleValueParam("projectId") String projectId,
-                                                 @SingleValueParam("chapterId") String chapterId,
-                                                 @SingleValueParam("actionType") String actionType) {
-        Tuple2<Integer, List<String>> tuple2 = bChapterInfoService.startCreateAudio(projectId, chapterId, actionType);
-
-        return Result.success(tuple2._2).setMsg("提交任务数：" + tuple2._1);
+    public Result<Object> startCreateAudio(@SingleValueParam("projectId") String projectId,
+                                           @SingleValueParam("chapterId") String chapterId,
+                                           @SingleValueParam("actionType") String actionType) {
+        bChapterInfoService.startCreateAudio(projectId, chapterId, actionType);
+        return Result.success();
     }
 
     @PostMapping(value = "stopCreateAudio")

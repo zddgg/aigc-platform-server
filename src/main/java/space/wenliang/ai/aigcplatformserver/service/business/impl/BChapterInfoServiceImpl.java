@@ -4,8 +4,6 @@ import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import io.vavr.Tuple;
-import io.vavr.Tuple2;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -21,8 +19,8 @@ import space.wenliang.ai.aigcplatformserver.hooks.StartHook;
 import space.wenliang.ai.aigcplatformserver.service.*;
 import space.wenliang.ai.aigcplatformserver.service.business.BChapterInfoService;
 import space.wenliang.ai.aigcplatformserver.service.cache.GlobalSettingService;
-import space.wenliang.ai.aigcplatformserver.socket.AudioProcessWebSocketHandler;
 import space.wenliang.ai.aigcplatformserver.socket.GlobalWebSocketHandler;
+import space.wenliang.ai.aigcplatformserver.socket.TextProjectWebSocketHandler;
 import space.wenliang.ai.aigcplatformserver.util.FileUtils;
 import space.wenliang.ai.aigcplatformserver.util.SubtitleUtils;
 
@@ -56,7 +54,7 @@ public class BChapterInfoServiceImpl implements BChapterInfoService, StartHook.S
     private final AmPromptAudioService amPromptAudioService;
 
     private final GlobalWebSocketHandler globalWebSocketHandler;
-    private final AudioProcessWebSocketHandler audioProcessWebSocketHandler;
+    private final TextProjectWebSocketHandler textProjectWebSocketHandler;
     private final GlobalSettingService globalSettingService;
 
     @Override
@@ -106,6 +104,13 @@ public class BChapterInfoServiceImpl implements BChapterInfoService, StartHook.S
                 chapterInfoService.saveBatch(chapterInfoEntities);
                 textRoleService.save(textRoleEntity);
 
+                JSONObject j1 = new JSONObject();
+                j1.put("type", "chapter_reload");
+                j1.put("state", "success");
+                j1.put("projectId", projectId);
+                j1.put("chapterId", chapterId);
+
+                textProjectWebSocketHandler.sendMessageToProject(projectId, JSON.toJSONString(j1));
             } else {
                 return new ArrayList<>();
             }
@@ -207,18 +212,17 @@ public class BChapterInfoServiceImpl implements BChapterInfoService, StartHook.S
     }
 
     @Override
-    public List<String> addAudioCreateTask(ChapterInfoEntity chapterInfoEntity) {
+    public void addAudioCreateTask(ChapterInfoEntity chapterInfoEntity) {
         ChapterInfoEntity chapterInfo = chapterInfoService.getById(chapterInfoEntity.getId());
         if (Objects.nonNull(chapterInfo)) {
             audioCreateTaskQueue.add(chapterInfo);
         }
-        List<String> creatingIds = new ArrayList<>();
-        audioCreateTaskQueue.forEach(t -> creatingIds.add(t.getIndex()));
-        return creatingIds;
+
+        sendAudioGenerateSummaryMsg(chapterInfoEntity.getProjectId(), chapterInfoEntity.getChapterId());
     }
 
     @Override
-    public Tuple2<Integer, List<String>> startCreateAudio(String projectId, String chapterId, String actionType) {
+    public void startCreateAudio(String projectId, String chapterId, String actionType) {
         List<ChapterInfoEntity> entities = chapterInfoService.getByChapterId(chapterId)
                 .stream()
                 .filter(c -> StringUtils.isNotBlank(c.getAmType()))
@@ -231,10 +235,7 @@ public class BChapterInfoServiceImpl implements BChapterInfoService, StartHook.S
                 .toList();
         audioCreateTaskQueue.addAll(entities);
 
-        List<String> creatingIds = new ArrayList<>();
-        entities.forEach(t -> creatingIds.add(t.getIndex()));
-
-        return Tuple.of(entities.size(), creatingIds);
+        sendAudioGenerateSummaryMsg(projectId, chapterId);
     }
 
     @Override
@@ -360,7 +361,6 @@ public class BChapterInfoServiceImpl implements BChapterInfoService, StartHook.S
                             createAudio(audioContext);
                         } catch (Exception e) {
                             log.error(e.getMessage(), e);
-                            globalWebSocketHandler.sendErrorMessage(e.getMessage());
                         }
                     }
                 }, Executors.newFixedThreadPool(1))
@@ -370,7 +370,7 @@ public class BChapterInfoServiceImpl implements BChapterInfoService, StartHook.S
                 });
     }
 
-    private void createAudio(ChapterInfoEntity chapterInfo) throws Exception {
+    private void createAudio(ChapterInfoEntity chapterInfo) {
 
         try {
 
@@ -419,36 +419,37 @@ public class BChapterInfoServiceImpl implements BChapterInfoService, StartHook.S
                     .set(ChapterInfoEntity::getAudioTaskState, AudioTaskStateConstants.created)
                     .eq(ChapterInfoEntity::getId, chapterInfo.getId()));
 
+            // 查询最新的 ChapterInfo
             chapterInfo = chapterInfoService.getById(chapterInfo.getId());
 
             JSONObject j1 = new JSONObject();
-            j1.put("type", "audio_create_task_result");
+            j1.put("type", "audio_generate_result");
             j1.put("state", "success");
             j1.put("projectId", chapterInfo.getProjectId());
             j1.put("chapterId", chapterInfo.getChapterId());
-
-            j1.put("taskNum", audioCreateTaskQueue.size());
-
-            List<String> creatingIds = new ArrayList<>();
-            audioCreateTaskQueue.forEach(t -> creatingIds.add(t.getIndex()));
-            j1.put("creatingIds", creatingIds);
-
             j1.put("chapterInfo", chapterInfo);
 
-            audioProcessWebSocketHandler.sendMessageToProject(chapterInfo.getProjectId(), JSON.toJSONString(j1));
+            textProjectWebSocketHandler.sendMessageToProject(chapterInfo.getProjectId(), JSON.toJSONString(j1));
 
+        } catch (Exception e) {
+            log.error("Create Audio Failed", e);
+            globalWebSocketHandler.sendErrorMessage(chapterInfo.getIndex() + " 音频生成失败", e.getMessage());
         } finally {
-            JSONObject j1 = new JSONObject();
-            j1.put("type", "audio_create_task_result");
-            j1.put("state", "success");
-            j1.put("projectId", chapterInfo.getProjectId());
-            j1.put("chapterId", chapterInfo.getChapterId());
-            j1.put("taskNum", audioCreateTaskQueue.size());
-
-            List<String> creatingIds = new ArrayList<>();
-            audioCreateTaskQueue.forEach(t -> creatingIds.add(t.getIndex()));
-            j1.put("creatingIds", creatingIds);
-            audioProcessWebSocketHandler.sendMessageToProject(chapterInfo.getProjectId(), JSON.toJSONString(j1));
+            sendAudioGenerateSummaryMsg(chapterInfo.getProjectId(), chapterInfo.getChapterId());
         }
+    }
+
+    private void sendAudioGenerateSummaryMsg(String projectId, String chapterId) {
+        JSONObject j1 = new JSONObject();
+        j1.put("type", "audio_generate_summary");
+        j1.put("state", "success");
+        j1.put("projectId", projectId);
+        j1.put("chapterId", chapterId);
+        j1.put("taskNum", audioCreateTaskQueue.size());
+
+        List<String> creatingIds = new ArrayList<>();
+        audioCreateTaskQueue.forEach(t -> creatingIds.add(t.getIndex()));
+        j1.put("creatingIds", creatingIds);
+        textProjectWebSocketHandler.sendMessageToProject(projectId, JSON.toJSONString(j1));
     }
 }

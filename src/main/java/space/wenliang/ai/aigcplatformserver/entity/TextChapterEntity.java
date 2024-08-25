@@ -54,7 +54,13 @@ public class TextChapterEntity implements Serializable {
 
 
     @TableField(exist = false)
+    private Integer wordNum;
+
+    @TableField(exist = false)
     private Integer textNum;
+
+    @TableField(exist = false)
+    private Integer dialogueNum;
 
     @TableField(exist = false)
     private Integer roleNum;

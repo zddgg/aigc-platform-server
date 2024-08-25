@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Component
-public class AudioProcessWebSocketHandler extends TextWebSocketHandler {
+public class TextProjectWebSocketHandler extends TextWebSocketHandler {
 
     private static final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
 
@@ -37,12 +37,16 @@ public class AudioProcessWebSocketHandler extends TextWebSocketHandler {
         log.info("Connection closed with session id: {}", session.getId());
     }
 
-    public void sendMessageToProject(String project, String message) throws Exception {
-        WebSocketSession session = sessions.get(project);
-        if (session != null && session.isOpen()) {
-            session.sendMessage(new TextMessage(message));
-        } else {
-            log.warn("No open session found for user: {}", project);
+    public void sendMessageToProject(String project, String message) {
+        try {
+            WebSocketSession session = sessions.get(project);
+            if (session != null && session.isOpen()) {
+                session.sendMessage(new TextMessage(message));
+            } else {
+                log.warn("No open session found for user: {}", project);
+            }
+        } catch (Exception e) {
+            log.error("Exception while sending message to project: {}", project, e);
         }
     }
 

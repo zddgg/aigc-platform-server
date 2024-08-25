@@ -33,7 +33,7 @@ public class SseController {
                     } else {
                         errorMessage = "错误请求：" + e.getMessage();
                     }
-                    globalWebSocketHandler.sendErrorMessage(errorMessage);
+                    globalWebSocketHandler.sendErrorMessage("文本大模型请求异常", errorMessage);
                     return Flux.empty();
                 });
     }
