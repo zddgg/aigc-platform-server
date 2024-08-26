@@ -105,7 +105,7 @@ public class BChapterInfoServiceImpl implements BChapterInfoService, StartHook.S
                 textRoleService.save(textRoleEntity);
 
                 JSONObject j1 = new JSONObject();
-                j1.put("type", "chapter_reload");
+                j1.put("type", "chapter_title_refresh,chapter_role_refresh");
                 j1.put("state", "success");
                 j1.put("projectId", projectId);
                 j1.put("chapterId", chapterId);
@@ -181,20 +181,24 @@ public class BChapterInfoServiceImpl implements BChapterInfoService, StartHook.S
 
     @Override
     public void updateControls(ControlsUpdate controlsUpdate) {
-        List<ChapterInfoEntity> chapterInfoEntities = chapterInfoService.listByIds(controlsUpdate.getChapterInfoIds());
-        for (ChapterInfoEntity chapterInfoEntity : chapterInfoEntities) {
-            if (Objects.equals(controlsUpdate.getEnableVolume(), Boolean.TRUE)) {
-                chapterInfoEntity.setAudioVolume(controlsUpdate.getVolume());
-            }
-            if (Objects.equals(controlsUpdate.getEnableSpeed(), Boolean.TRUE)) {
-                chapterInfoEntity.setAudioSpeed(controlsUpdate.getSpeed());
-            }
-            if (Objects.equals(controlsUpdate.getEnableInterval(), Boolean.TRUE)) {
-                chapterInfoEntity.setAudioInterval(controlsUpdate.getInterval());
-            }
+        if (!CollectionUtils.isEmpty(controlsUpdate.getChapterInfoIds())) {
+            List<ChapterInfoEntity> updateList = controlsUpdate.getChapterInfoIds().stream()
+                    .map(item -> {
+                        ChapterInfoEntity update = new ChapterInfoEntity();
+                        update.setId(item);
+                        if (Objects.equals(controlsUpdate.getEnableVolume(), Boolean.TRUE)) {
+                            update.setAudioVolume(controlsUpdate.getVolume());
+                        }
+                        if (Objects.equals(controlsUpdate.getEnableSpeed(), Boolean.TRUE)) {
+                            update.setAudioSpeed(controlsUpdate.getSpeed());
+                        }
+                        if (Objects.equals(controlsUpdate.getEnableInterval(), Boolean.TRUE)) {
+                            update.setAudioInterval(controlsUpdate.getInterval());
+                        }
+                        return update;
+                    }).toList();
+            chapterInfoService.updateBatchById(updateList);
         }
-
-        chapterInfoService.updateBatchById(chapterInfoEntities);
     }
 
     @Override
@@ -298,6 +302,9 @@ public class BChapterInfoServiceImpl implements BChapterInfoService, StartHook.S
         chapterInfoEntity.setChapterId(chapterInfo.getChapterId());
         chapterInfoEntity.setText(chapterInfo.getText());
         chapterInfoEntity.setTextSort(chapterInfo.getTextSort());
+        chapterInfoEntity.setAudioVolume(1d);
+        chapterInfoEntity.setAudioSpeed(1d);
+        chapterInfoEntity.setAudioInterval(300);
         chapterInfoEntity.setAudioTaskState(AudioTaskStateConstants.init);
         String aside = "旁白";
         chapterInfoEntity.setRole(aside);
@@ -351,6 +358,25 @@ public class BChapterInfoServiceImpl implements BChapterInfoService, StartHook.S
         chapterInfoService.save(chapterInfoEntity);
 
         return chapterInfoEntity;
+    }
+
+    @Override
+    public void batchOperator(ChapterBatchOperator chapterBatchOperator) {
+        if (!CollectionUtils.isEmpty(chapterBatchOperator.getChapterInfoIds())) {
+            if (Objects.equals(chapterBatchOperator.getOperatorType(), "dialogue_markup")) {
+                List<ChapterInfoEntity> updateList = chapterBatchOperator.getChapterInfoIds().stream()
+                        .map(item -> {
+                            ChapterInfoEntity update = new ChapterInfoEntity();
+                            update.setId(item);
+                            update.setDialogueFlag(Objects.equals(chapterBatchOperator.getBooleanValue(), Boolean.TRUE));
+                            return update;
+                        }).toList();
+                chapterInfoService.updateBatchById(updateList);
+            }
+            if (Objects.equals(chapterBatchOperator.getOperatorType(), "delete")) {
+                chapterInfoService.removeBatchByIds(chapterBatchOperator.getChapterInfoIds());
+            }
+        }
     }
 
     public void audioCreateTask() {

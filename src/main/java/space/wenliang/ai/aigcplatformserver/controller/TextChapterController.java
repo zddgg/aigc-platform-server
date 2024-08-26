@@ -392,4 +392,10 @@ public class TextChapterController {
         bChapterInfoService.removePolyphonicInfo(polyphonicParams);
         return Result.success();
     }
+
+    @PostMapping(value = "batchOperator")
+    public Result<Object> batchOperator(@RequestBody ChapterBatchOperator ChapterBatchOperator) {
+        bChapterInfoService.batchOperator(ChapterBatchOperator);
+        return Result.success();
+    }
 }
