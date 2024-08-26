@@ -99,6 +99,9 @@ public class ChapterInfoServiceImpl extends ServiceImpl<ChapterInfoMapper, Chapt
 
                 chapterInfoEntity.setRole("旁白");
 
+                chapterInfoEntity.setAudioVolume(1d);
+                chapterInfoEntity.setAudioSpeed(1d);
+                chapterInfoEntity.setAudioInterval(300);
                 chapterInfoEntity.setAudioTaskState(AudioTaskStateConstants.process);
                 chapterInfoEntities.add(chapterInfoEntity);
 

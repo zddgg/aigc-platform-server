@@ -1,5 +1,6 @@
 package space.wenliang.ai.aigcplatformserver.service.business;
 
+import space.wenliang.ai.aigcplatformserver.bean.ChapterBatchOperator;
 import space.wenliang.ai.aigcplatformserver.bean.ControlsUpdate;
 import space.wenliang.ai.aigcplatformserver.bean.PolyphonicParams;
 import space.wenliang.ai.aigcplatformserver.bean.UpdateModelInfo;
@@ -40,4 +41,6 @@ public interface BChapterInfoService {
     void removePolyphonicInfo(PolyphonicParams polyphonicParams);
 
     ChapterInfoEntity addChapterInfo(ChapterInfoEntity chapterInfo);
+
+    void batchOperator(ChapterBatchOperator chapterBatchOperator);
 }

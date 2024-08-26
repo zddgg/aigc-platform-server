@@ -150,6 +150,9 @@ public class BTextProjectServiceImpl implements BTextProjectService {
             chapterInfo.setText(item.getText());
             chapterInfo.setDialogueFlag(true);
             chapterInfo.setRole(item.getRole());
+            chapterInfo.setAudioVolume(1d);
+            chapterInfo.setAudioSpeed(1d);
+            chapterInfo.setAudioInterval(300);
             chapterInfo.setAudioTaskState(AudioTaskStateConstants.init);
 
             saveList.add(chapterInfo);

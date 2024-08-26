@@ -73,17 +73,17 @@ public class ChapterInfoEntity extends AudioRoleInfo implements Serializable {
      *
      */
     @TableField(value = "audio_volume")
-    private Double audioVolume = 1.0;
+    private Double audioVolume;
     /**
      *
      */
     @TableField(value = "audio_speed")
-    private Double audioSpeed = 1.0;
+    private Double audioSpeed;
     /**
      *
      */
     @TableField(value = "audio_interval")
-    private Integer audioInterval = 300;
+    private Integer audioInterval;
     /**
      *
      */

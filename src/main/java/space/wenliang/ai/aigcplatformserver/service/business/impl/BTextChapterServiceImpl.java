@@ -897,6 +897,9 @@ public class BTextChapterServiceImpl implements BTextChapterService {
                 chapterInfoEntity.setDialogueFlag(chapterInfoTuple2._1);
 
                 chapterInfoEntity.setRole("旁白");
+                chapterInfoEntity.setAudioVolume(1d);
+                chapterInfoEntity.setAudioSpeed(1d);
+                chapterInfoEntity.setAudioInterval(300);
                 chapterInfoEntity.setAudioTaskState(AudioTaskStateConstants.init);
 
                 chapterInfoEntities.add(chapterInfoEntity);
