@@ -13,7 +13,7 @@ create table if not exists audio_server_config_entity
 INSERT INTO audio_server_config_entity (name, host, path, api_version)
 VALUES ('gpt-sovits', 'http://127.0.0.1:16860', '/tts', 'v2');
 INSERT INTO audio_server_config_entity (name, host, path, api_version)
-VALUES ('fish-speech', 'http://127.0.0.1:16861', '/v1/invoke', 'v1');
+VALUES ('fish-speech', 'http://127.0.0.1:16861', '/v1/tts', 'v1');
 INSERT INTO audio_server_config_entity (name, host, path, api_version)
 VALUES ('edge-tts', 'http://127.0.0.1:16862', '/tts', 'v1');
 INSERT INTO audio_server_config_entity (name, host, path, api_version)
