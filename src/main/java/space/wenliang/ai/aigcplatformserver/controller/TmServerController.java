@@ -42,7 +42,7 @@ public class TmServerController {
                 "path": "/v1/chat/completions",
                 "model": "moonshot-v1-32k",
                 "temperature": 0.3,
-                "maxTokens": 0
+                "maxTokens": 10000
               },
               {
                 "templateName": "DeepSeek",

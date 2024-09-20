@@ -1,11 +1,15 @@
 package space.wenliang.ai.aigcplatformserver.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.msgpack.jackson.dataformat.MessagePackFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.http.codec.json.Jackson2JsonDecoder;
+import org.springframework.http.codec.json.Jackson2JsonEncoder;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
@@ -60,6 +64,24 @@ public class WebMvcConfig implements WebMvcConfigurer {
         return WebClient.builder()
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .build();
+    }
+
+    @Bean
+    public WebClient msgpackWebClient() {
+        ObjectMapper objectMapper = new ObjectMapper(new MessagePackFactory());
+
+        return WebClient.builder()
+                .codecs(configurer -> {
+                    configurer.defaultCodecs().jackson2JsonEncoder(
+                            new Jackson2JsonEncoder(objectMapper, MediaType.parseMediaType("application/msgpack"))
+                    );
+                    configurer.defaultCodecs().jackson2JsonDecoder(
+                            new Jackson2JsonDecoder(objectMapper, MediaType.parseMediaType("application/msgpack"))
+                    );
+                    configurer.defaultCodecs().maxInMemorySize(10 * 1024 * 1024);  // 设置最大缓冲区为 10MB
+                })
+                .build();
+
     }
 
     @Bean
