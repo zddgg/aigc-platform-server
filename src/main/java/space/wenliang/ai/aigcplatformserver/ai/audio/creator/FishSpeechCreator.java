@@ -85,7 +85,7 @@ public class FishSpeechCreator extends AbsAudioCreator {
 
         return msgpackWebClient
                 .post()
-                .uri(context.getAmServer().getHost() + context.getAmServer().getPath())
+                .uri(context.getAmServer().getUri())
                 .contentType(MediaType.parseMediaType("application/msgpack"))
                 .bodyValue(params)
                 .retrieve()

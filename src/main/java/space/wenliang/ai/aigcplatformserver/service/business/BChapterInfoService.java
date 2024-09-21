@@ -30,7 +30,7 @@ public interface BChapterInfoService {
 
     void addAudioCreateTask(ChapterInfoEntity chapterInfoEntity);
 
-    void startCreateAudio(String projectId, String chapterId, String actionType);
+    void startCreateAudio(String projectId, String chapterId, String actionType, List<Integer> chapterInfoIds);
 
     void stopCreateAudio();
 
