@@ -226,15 +226,18 @@ public class BChapterInfoServiceImpl implements BChapterInfoService, StartHook.S
     }
 
     @Override
-    public void startCreateAudio(String projectId, String chapterId, String actionType) {
+    public void startCreateAudio(String projectId, String chapterId, String actionType, List<Integer> chapterInfoIds) {
         List<ChapterInfoEntity> entities = chapterInfoService.getByChapterId(chapterId)
                 .stream()
                 .filter(c -> StringUtils.isNotBlank(c.getAmType()))
                 .filter(c -> {
                     if (StringUtils.equals(actionType, "all")) {
                         return true;
+                    } else if (StringUtils.equals(actionType, "modified")) {
+                        return !List.of(AudioTaskStateConstants.created, AudioTaskStateConstants.combined).contains(c.getAudioTaskState());
+                    } else {
+                        return chapterInfoIds.contains(c.getId());
                     }
-                    return !List.of(AudioTaskStateConstants.created, AudioTaskStateConstants.combined).contains(c.getAudioTaskState());
                 })
                 .toList();
         audioCreateTaskQueue.addAll(entities);

@@ -41,4 +41,8 @@ public class AmServerEntity implements Serializable {
      */
     @TableField(value = "api_version")
     private String apiVersion;
+
+    public String getUri() {
+        return getHost().trim() + getPath().trim();
+    }
 }

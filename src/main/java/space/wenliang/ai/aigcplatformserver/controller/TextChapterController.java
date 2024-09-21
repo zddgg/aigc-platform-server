@@ -245,8 +245,9 @@ public class TextChapterController {
     @PostMapping(value = "startCreateAudio")
     public Result<Object> startCreateAudio(@SingleValueParam("projectId") String projectId,
                                            @SingleValueParam("chapterId") String chapterId,
-                                           @SingleValueParam("actionType") String actionType) {
-        bChapterInfoService.startCreateAudio(projectId, chapterId, actionType);
+                                           @SingleValueParam("actionType") String actionType,
+                                           @SingleValueParam("chapterInfoIds") List<Integer> chapterInfoIds) {
+        bChapterInfoService.startCreateAudio(projectId, chapterId, actionType, chapterInfoIds);
         return Result.success();
     }
 

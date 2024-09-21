@@ -136,7 +136,7 @@ public abstract class AbsAudioCreator implements IAudioCreator {
 
         return restClient
                 .post()
-                .uri(context.getAmServer().getHost() + context.getAmServer().getPath())
+                .uri(context.getAmServer().getUri())
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(params)
                 .retrieve()
