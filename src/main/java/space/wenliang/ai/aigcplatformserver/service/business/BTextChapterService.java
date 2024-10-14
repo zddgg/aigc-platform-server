@@ -47,11 +47,11 @@ public interface BTextChapterService {
 
     void deleteCommonRole(TextCommonRoleEntity textCommonRoleEntity);
 
-    Object checkRoleInference(String projectId, String chapterId);
+    RoleInferenceData queryRoleInferenceCache(String projectId, String chapterId);
 
     void loadRoleInference(String projectId, String chapterId);
 
     void chapterExpose(ChapterExpose chapterExpose) throws Exception;
 
-    Flux<String> roleInference(String projectId, String chapterId);
+    Flux<String> roleInference(RoleInferenceParam roleInferenceParam);
 }

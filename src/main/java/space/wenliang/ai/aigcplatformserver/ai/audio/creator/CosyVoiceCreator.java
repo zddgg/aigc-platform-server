@@ -49,28 +49,28 @@ public class CosyVoiceCreator extends AbsAudioCreator {
         String mode = config.getString("mode");
 
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("tts", context.getMarkupText());
-        builder.part("role", config.getString("role"));
+        builder.part("tts_text", context.getMarkupText());
+        builder.part("spk_id", config.getString("role"));
         builder.part("seed", Optional.ofNullable(config.getInteger("seed")).orElse(0));
 
         String path = "";
         if (StringUtils.equals(mode, "preset")) {
-            path = "/api/inference/sft";
+            path = "/inference_sft";
         }
 
         if (StringUtils.equals(mode, "custom")) {
-            path = "/api/inference/zero-shot";
+            path = "/inference_zero_shot";
 
             Path audioPath = envConfig.buildModelPath(
                     prompt_audio, context.getAmPaGroup(), context.getAmPaRole(), context.getAmPaMood(), context.getAmPaAudio());
-            builder.part("prompt", context.getAmPaAudioText());
-            builder.part("audio", new FileSystemResource(audioPath));
+            builder.part("prompt_text", context.getAmPaAudioText());
+            builder.part("prompt_wav", new FileSystemResource(audioPath));
         }
 
         if (StringUtils.equals(mode, "advanced")) {
-            path = "/api/inference/instruct";
+            path = "/inference_instruct";
 
-            builder.part("instruct", config.getString("instruct"));
+            builder.part("instruct_text", config.getString("instruct"));
         }
 
         return restClient

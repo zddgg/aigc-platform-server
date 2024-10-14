@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
 import space.wenliang.ai.aigcplatformserver.ai.chat.AiService;
@@ -517,9 +518,38 @@ public class BTextChapterServiceImpl implements BTextChapterService {
     }
 
     @Override
-    public Object checkRoleInference(String projectId, String chapterId) {
-        List<TextRoleInferenceEntity> list = textRoleInferenceService.getByChapterId(chapterId);
-        return !CollectionUtils.isEmpty(list);
+    public RoleInferenceData queryRoleInferenceCache(String projectId, String chapterId) {
+        List<ChapterInfoEntity> chapterInfos = chapterInfoService.getByChapterId(chapterId);
+
+        List<String> linesList = new ArrayList<>();
+        chapterInfos.forEach(lineInfo -> {
+            if (Objects.equals(lineInfo.getDialogueFlag(), Boolean.TRUE)) {
+                linesList.add(lineInfo.getIndex() + ": " + lineInfo.getText());
+            }
+        });
+
+        StringBuilder content = new StringBuilder();
+
+        chapterInfos.stream()
+                .collect(Collectors.groupingBy(ChapterInfoEntity::getParaIndex, TreeMap::new, Collectors.toList()))
+                .values()
+                .forEach(val -> {
+                    val.stream().sorted(Comparator.comparingInt(ChapterInfoEntity::getSentIndex))
+                            .map(ChapterInfoEntity::getText)
+                            .forEach(content::append);
+                    content.append("\n");
+                });
+
+        RoleInferenceData roleInferenceData = new RoleInferenceData();
+        roleInferenceData.setContent(content.toString());
+        roleInferenceData.setLines(String.join("\n", linesList));
+
+        List<TextRoleInferenceEntity> textRoleInferences = textRoleInferenceService.getByChapterId(chapterId);
+        if (!CollectionUtils.isEmpty(textRoleInferences)) {
+            roleInferenceData.setTextRoleInferences(textRoleInferences);
+        }
+
+        return roleInferenceData;
     }
 
     @Override
@@ -754,7 +784,27 @@ public class BTextChapterServiceImpl implements BTextChapterService {
     }
 
     @Override
-    public Flux<String> roleInference(String projectId, String chapterId) {
+    public Flux<String> roleInference(RoleInferenceParam roleInferenceParam) {
+        String projectId = roleInferenceParam.getProjectId();
+        String chapterId = roleInferenceParam.getChapterId();
+        if (StringUtils.equals(roleInferenceParam.getInferenceType(), "online")) {
+            return onlineRoleInference(roleInferenceParam);
+        }
+        if (StringUtils.equals(roleInferenceParam.getInferenceType(), "last")) {
+            loadRoleInference(projectId, roleInferenceParam.getChapterId());
+        }
+        if (StringUtils.equals(roleInferenceParam.getInferenceType(), "input")) {
+            if (StringUtils.isNotBlank(roleInferenceParam.getInferenceResult())) {
+                List<ChapterInfoEntity> chapterInfos = chapterInfoService.getByChapterId(chapterId);
+                mergeAiResultInfo(projectId, chapterId, roleInferenceParam.getInferenceResult(), chapterInfos);
+            }
+        }
+        return Flux.empty();
+    }
+
+    public Flux<String> onlineRoleInference(RoleInferenceParam roleInferenceParam) {
+        String projectId = roleInferenceParam.getProjectId();
+        String chapterId = roleInferenceParam.getChapterId();
 
         List<ChapterInfoEntity> chapterInfos = chapterInfoService.getByChapterId(chapterId);
 
@@ -766,6 +816,7 @@ public class BTextChapterServiceImpl implements BTextChapterService {
         });
 
         if (CollectionUtils.isEmpty(linesList)) {
+            globalWebSocketHandler.sendErrorMessage("文本大模型请求异常", "没有查询到对话，请检查是否有标记对话");
             return Flux.empty();
         }
 
@@ -782,22 +833,11 @@ public class BTextChapterServiceImpl implements BTextChapterService {
                     content.append("\n");
                 });
 
+        String systemMessage = roleInferenceParam.getSystemPrompt();
 
-        String systemMessage = "你是一个小说内容台词分析员，你会精确的找到台词在原文中的位置并分析属于哪个角色，以及角色在说这句台词时的上下文环境及情绪等。";
-
-        String userMessage = STR."""
-                严格按照以下要求工作：
-                \{parseStep}
-
-                输出格式如下：
-                \{outputFormat}
-
-                原文部分：
-                \{content.toString()}
-
-                台词部分：
-                \{lines}
-                """;
+        String userMessage = roleInferenceParam.getUserPrompt()
+                .replace("@{小说内容}", content.toString())
+                .replace("@{对话列表}", lines);
 
         log.info("\n提示词, systemMessage: {}", systemMessage);
         log.info("\n提示词, userMessage: {}", userMessage);
@@ -807,17 +847,7 @@ public class BTextChapterServiceImpl implements BTextChapterService {
         StringBuilder sbStr = new StringBuilder();
 
         return aiService.stream(systemMessage, userMessage)
-
-//        String longString = temp;
-//        int charactersPerSecond = 80;
-//
-//        return Flux.interval(Duration.ofMillis(200))
-//                .map(i -> longString.substring((int) Math.min((i * charactersPerSecond), longString.length()), (int) Math.min((i + 1) * charactersPerSecond, longString.length())))
-//                .takeWhile(s -> !s.isEmpty())
-
-
                 .publishOn(Schedulers.boundedElastic())
-
                 .doOnNext(v -> {
                     System.out.println(v);
                     aiResultStr.append(v);
@@ -859,6 +889,16 @@ public class BTextChapterServiceImpl implements BTextChapterService {
                     } catch (Exception e) {
                         log.error(e.getMessage(), e);
                     }
+                })
+                .onErrorResume(e -> {
+                    String errorMessage;
+                    if (e instanceof WebClientResponseException.Unauthorized) {
+                        errorMessage = "未经授权的访问，请检查 apiKey 等相关配置";
+                    } else {
+                        errorMessage = "错误请求：" + e.getMessage();
+                    }
+                    globalWebSocketHandler.sendErrorMessage("文本大模型请求异常", errorMessage);
+                    return Flux.error(e);
                 })
                 .doOnComplete(() -> mergeAiResultInfo(projectId, chapterId, aiResultStr.toString(), chapterInfos));
     }
@@ -954,7 +994,7 @@ public class BTextChapterServiceImpl implements BTextChapterService {
                 globalWebSocketHandler.sendErrorMessage("文本大模型请求异常", "没有接收到文本大模型的消息！");
             }
 
-            aiResult = reCombineAiResult(aiResult);
+            aiResult = reCombineAiResult(aiResult, chapterInfos);
 
             List<AiResult.Role> roles = aiResult.getRoles();
 
@@ -1071,24 +1111,24 @@ public class BTextChapterServiceImpl implements BTextChapterService {
         List<AiResult.Role> roles = new ArrayList<>();
         List<AiResult.LinesMapping> linesMappings = new ArrayList<>();
         for (String line : text.split("\n")) {
-            if (StringUtils.equals("角色分析:", line)) {
+            if (StringUtils.equals("角色分析:", line.trim())) {
                 isMapping = false;
                 continue;
             }
-            if (StringUtils.equals("台词分析:", line)) {
+            if (StringUtils.equals("台词分析:", line.trim())) {
                 isMapping = true;
                 continue;
             }
             if (!isMapping) {
-                String[] split = line.split(",");
+                String[] split = line.trim().split(",");
                 if (split.length == 3) {
-                    roles.add(new AiResult.Role(split[0], split[1], split[2]));
+                    roles.add(new AiResult.Role(split[0].trim(), split[1].trim(), split[2].trim()));
                 }
             }
             if (isMapping) {
-                String[] split = line.split(",");
+                String[] split = line.trim().split(",");
                 if (split.length == 3) {
-                    linesMappings.add(new AiResult.LinesMapping(split[0], split[1], split[2]));
+                    linesMappings.add(new AiResult.LinesMapping(split[0].trim(), split[1].trim(), split[2].trim()));
                 }
             }
         }
@@ -1096,10 +1136,15 @@ public class BTextChapterServiceImpl implements BTextChapterService {
         return new AiResult(roles, linesMappings);
     }
 
-    public AiResult reCombineAiResult(AiResult aiResult) throws IOException {
+    public AiResult reCombineAiResult(AiResult aiResult, List<ChapterInfoEntity> chapterInfos) throws IOException {
+
+        List<String> indexes = chapterInfos.stream().map(ChapterInfoEntity::getIndex).toList();
 
         List<AiResult.Role> roles = aiResult.getRoles();
-        List<AiResult.LinesMapping> linesMappings = aiResult.getLinesMappings();
+        List<AiResult.LinesMapping> linesMappings = aiResult.getLinesMappings()
+                .stream()
+                .filter(v -> indexes.contains(v.getLinesIndex()))
+                .toList();
 
         // 大模型总结的角色列表有时候会多也会少
         List<AiResult.Role> combineRoles = combineRoles(roles, linesMappings);

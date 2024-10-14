@@ -181,17 +181,10 @@ public class TextChapterController {
         return Result.success();
     }
 
-    @PostMapping("checkRoleInference")
-    public Result<Object> checkRoleInference(@SingleValueParam("projectId") String projectId,
-                                             @SingleValueParam("chapterId") String chapterId) {
-        return Result.success(bTextChapterService.checkRoleInference(projectId, chapterId));
-    }
-
-    @PostMapping("loadRoleInference")
-    public Result<Object> loadRoleInference(@SingleValueParam("projectId") String projectId,
-                                            @SingleValueParam("chapterId") String chapterId) {
-        bTextChapterService.loadRoleInference(projectId, chapterId);
-        return Result.success();
+    @PostMapping("queryRoleInferenceCache")
+    public Result<Object> queryRoleInferenceCache(@SingleValueParam("projectId") String projectId,
+                                                  @SingleValueParam("chapterId") String chapterId) {
+        return Result.success(bTextChapterService.queryRoleInferenceCache(projectId, chapterId));
     }
 
     @PostMapping(value = "audioModelChange")

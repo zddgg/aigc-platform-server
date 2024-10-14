@@ -44,6 +44,9 @@ public class SingleValueParamHandlerMethodArgumentResolver implements HandlerMet
         }
 
         String value = singleValueParam.value();
+        if (Objects.isNull(jsonObject)) {
+            return null;
+        }
         return jsonObject.get(value);
     }
 }

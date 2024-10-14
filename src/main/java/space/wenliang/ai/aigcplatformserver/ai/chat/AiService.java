@@ -23,7 +23,7 @@ public class AiService {
         Optional<TmServerEntity> first = services.stream()
                 .filter(chatModelParam -> Objects.equals(chatModelParam.getActive(), Boolean.TRUE)).findFirst();
         if (first.isEmpty()) {
-            throw new RuntimeException("No active chat service found");
+            return Flux.error(new RuntimeException("需要有一个激活状态的文本大模型配置！"));
         }
         return aiServiceMap.get(first.get().getInterfaceType()).stream(first.get(), systemMessage, userMessage);
     }
