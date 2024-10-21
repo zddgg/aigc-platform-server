@@ -315,7 +315,7 @@ public class TextChapterController {
                     "text",
                     FileUtils.fileNameFormat(textProject.getProjectName()),
                     FileUtils.fileNameFormat(textChapter.getChapterName()),
-                    "audio",
+                    "tmp",
                     chapterInfo.getIndex() + ".wav");
 
             if (Files.notExists(path.getParent())) {
