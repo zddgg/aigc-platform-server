@@ -609,6 +609,7 @@ public class BTextChapterServiceImpl implements BTextChapterService {
                     .peek(c -> {
                         TextRoleInferenceEntity roleInferenceEntity = roleInferenceEntityMap.get(c.getIndex());
                         c.setRole(roleInferenceEntity.getRole());
+                        c.setTextMood(roleInferenceEntity.getMood());
 
                         if (commonRoleMap.containsKey(roleInferenceEntity.getRole())) {
                             TextCommonRoleEntity commonRole = commonRoleMap.get(roleInferenceEntity.getRole());
@@ -1018,6 +1019,7 @@ public class BTextChapterServiceImpl implements BTextChapterService {
                 if (linesMappingMap.containsKey(key)) {
                     AiResult.LinesMapping linesMapping = linesMappingMap.get(key);
                     role = linesMapping.getRole();
+                    chapterInfo.setTextMood(linesMapping.getMood());
                 } else {
                     hasAside = true;
                 }

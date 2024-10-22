@@ -1,10 +1,12 @@
 package space.wenliang.ai.aigcplatformserver.hooks.start;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import space.wenliang.ai.aigcplatformserver.config.EnvConfig;
 import space.wenliang.ai.aigcplatformserver.hooks.StartHook;
 
+@Profile("integrated")
 @Component
 @RequiredArgsConstructor
 public class StartupInfoPrinter implements StartHook.StartHookListener {
@@ -16,7 +18,7 @@ public class StartupInfoPrinter implements StartHook.StartHookListener {
         String[] messages = {
                 "AIGC Platform Server Startup Information",
                 String.format("Version: %s", envConfig.getApplicationVersion()),
-                String.format("Console URL: http://127.0.0.1:%s", envConfig.getPort())
+                String.format("Console URL: http://127.0.0.1:%s/webui/text", envConfig.getPort())
         };
 
         // Calculate the length of the longest message

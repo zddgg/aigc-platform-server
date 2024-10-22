@@ -57,6 +57,11 @@ public class ChapterInfoEntity extends AudioRoleInfo implements Serializable {
     /**
      *
      */
+    @TableField(value = "text_mood")
+    private String textMood;
+    /**
+     *
+     */
     @TableField(value = "text_lang")
     private String textLang;
     /**
