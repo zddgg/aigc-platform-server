@@ -1,6 +1,9 @@
 package space.wenliang.ai.aigcplatformserver.bean;
 
 import lombok.Data;
+import space.wenliang.ai.aigcplatformserver.entity.TextRoleInferenceEntity;
+
+import java.util.List;
 
 @Data
 public class RoleInferenceParam {
@@ -10,5 +13,5 @@ public class RoleInferenceParam {
     private Integer tmServerId;
     private String systemPrompt;
     private String userPrompt;
-    private String inferenceResult;
+    private List<TextRoleInferenceEntity> textRoleInferences;
 }

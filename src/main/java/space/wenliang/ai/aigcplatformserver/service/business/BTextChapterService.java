@@ -3,10 +3,7 @@ package space.wenliang.ai.aigcplatformserver.service.business;
 import reactor.core.publisher.Flux;
 import space.wenliang.ai.aigcplatformserver.bean.*;
 import space.wenliang.ai.aigcplatformserver.common.Page;
-import space.wenliang.ai.aigcplatformserver.entity.ChapterInfoEntity;
-import space.wenliang.ai.aigcplatformserver.entity.TextChapterEntity;
-import space.wenliang.ai.aigcplatformserver.entity.TextCommonRoleEntity;
-import space.wenliang.ai.aigcplatformserver.entity.TextRoleEntity;
+import space.wenliang.ai.aigcplatformserver.entity.*;
 
 import java.io.IOException;
 import java.util.List;
@@ -49,7 +46,7 @@ public interface BTextChapterService {
 
     RoleInferenceData queryRoleInferenceCache(String projectId, String chapterId);
 
-    void loadRoleInference(String projectId, String chapterId);
+    void loadRoleInference(String projectId, String chapterId, List<TextRoleInferenceEntity> textRoleInferences);
 
     void chapterExpose(ChapterExpose chapterExpose) throws Exception;
 

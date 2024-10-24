@@ -56,4 +56,7 @@ public class TextRoleInferenceEntity implements Serializable {
      */
     @TableField(value = "text_index")
     private String textIndex;
+
+    @TableField(exist = false)
+    private String text;
 }
