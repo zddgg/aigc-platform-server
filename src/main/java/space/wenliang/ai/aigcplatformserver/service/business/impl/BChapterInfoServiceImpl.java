@@ -379,6 +379,25 @@ public class BChapterInfoServiceImpl implements BChapterInfoService, StartHook.S
             if (Objects.equals(chapterBatchOperator.getOperatorType(), "delete")) {
                 chapterInfoService.removeBatchByIds(chapterBatchOperator.getChapterInfoIds());
             }
+            if (Objects.equals(chapterBatchOperator.getOperatorType(), "text_combine")) {
+                List<ChapterInfoEntity> chapterInfos = chapterInfoService.listByIds(chapterBatchOperator.getChapterInfoIds());
+                if (!CollectionUtils.isEmpty(chapterInfos)) {
+                    ChapterInfoEntity first = chapterInfos.removeFirst();
+
+                    StringBuilder newText = new StringBuilder(first.getText());
+                    List<Integer> removeIds = new ArrayList<>();
+                    for (ChapterInfoEntity chapterInfo : chapterInfos) {
+                        newText.append(chapterInfo.getText());
+                        removeIds.add(chapterInfo.getId());
+                    }
+                    chapterInfoService.update(new LambdaUpdateWrapper<ChapterInfoEntity>()
+                            .set(ChapterInfoEntity::getText, newText.toString())
+                            .set(ChapterInfoEntity::getAudioTaskState, AudioTaskStateConstants.modified)
+                            .eq(ChapterInfoEntity::getId, first.getId())
+                    );
+                    chapterInfoService.removeByIds(removeIds);
+                }
+            }
         }
     }
 

@@ -122,23 +122,25 @@ public class ChapterInfoServiceImpl extends ServiceImpl<ChapterInfoMapper, Chapt
 
     @Override
     public void audioModelReset(List<Integer> ids) {
-        this.update(new LambdaUpdateWrapper<ChapterInfoEntity>()
-                .set(ChapterInfoEntity::getAmType, null)
-                .set(ChapterInfoEntity::getAmPaId, null)
-                .set(ChapterInfoEntity::getAmPaGroup, null)
-                .set(ChapterInfoEntity::getAmPaRole, null)
-                .set(ChapterInfoEntity::getAmPaMood, null)
-                .set(ChapterInfoEntity::getAmPaAudio, null)
-                .set(ChapterInfoEntity::getAmPaAudioText, null)
-                .set(ChapterInfoEntity::getAmPaAudioLang, null)
-                .set(ChapterInfoEntity::getAmMfId, null)
-                .set(ChapterInfoEntity::getAmMfGroup, null)
-                .set(ChapterInfoEntity::getAmMfRole, null)
-                .set(ChapterInfoEntity::getAmMfJson, null)
-                .set(ChapterInfoEntity::getAmMcId, null)
-                .set(ChapterInfoEntity::getAmMcName, null)
-                .set(ChapterInfoEntity::getAmMcParamsJson, null)
-                .in(ChapterInfoEntity::getId, ids));
+        if (!CollectionUtils.isEmpty(ids)) {
+            this.update(new LambdaUpdateWrapper<ChapterInfoEntity>()
+                    .set(ChapterInfoEntity::getAmType, null)
+                    .set(ChapterInfoEntity::getAmPaId, null)
+                    .set(ChapterInfoEntity::getAmPaGroup, null)
+                    .set(ChapterInfoEntity::getAmPaRole, null)
+                    .set(ChapterInfoEntity::getAmPaMood, null)
+                    .set(ChapterInfoEntity::getAmPaAudio, null)
+                    .set(ChapterInfoEntity::getAmPaAudioText, null)
+                    .set(ChapterInfoEntity::getAmPaAudioLang, null)
+                    .set(ChapterInfoEntity::getAmMfId, null)
+                    .set(ChapterInfoEntity::getAmMfGroup, null)
+                    .set(ChapterInfoEntity::getAmMfRole, null)
+                    .set(ChapterInfoEntity::getAmMfJson, null)
+                    .set(ChapterInfoEntity::getAmMcId, null)
+                    .set(ChapterInfoEntity::getAmMcName, null)
+                    .set(ChapterInfoEntity::getAmMcParamsJson, null)
+                    .in(ChapterInfoEntity::getId, ids));
+        }
     }
 }
 

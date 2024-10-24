@@ -18,12 +18,12 @@ public class AiService {
     private final Map<String, IAiService> aiServiceMap;
     private final TmServerService aChatModelConfigService;
 
-    public Flux<String> stream(String systemMessage, String userMessage) {
+    public Flux<String> stream(Integer tmServerId, String systemMessage, String userMessage) {
         List<TmServerEntity> services = aChatModelConfigService.list();
         Optional<TmServerEntity> first = services.stream()
-                .filter(chatModelParam -> Objects.equals(chatModelParam.getActive(), Boolean.TRUE)).findFirst();
+                .filter(chatModelParam -> Objects.equals(chatModelParam.getId(), tmServerId)).findFirst();
         if (first.isEmpty()) {
-            return Flux.error(new RuntimeException("需要有一个激活状态的文本大模型配置！"));
+            return Flux.error(new RuntimeException("需要有一个文本大模型配置！"));
         }
         return aiServiceMap.get(first.get().getInterfaceType()).stream(first.get(), systemMessage, userMessage);
     }

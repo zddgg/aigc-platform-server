@@ -10,5 +10,6 @@ import java.util.List;
 public class RoleInferenceData {
     private String content;
     private String lines;
-    private List<TextRoleInferenceEntity> textRoleInferences = new ArrayList<>();
+    private List<TextRoleInferenceEntity> textRoleMoods = new ArrayList<>();
+    private List<AiResult.Role> roles = new ArrayList<>();
 }

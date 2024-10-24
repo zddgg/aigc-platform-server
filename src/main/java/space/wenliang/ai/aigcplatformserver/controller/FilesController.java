@@ -23,7 +23,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-@CrossOrigin
 @RestController
 @RequestMapping("/files")
 @RequiredArgsConstructor

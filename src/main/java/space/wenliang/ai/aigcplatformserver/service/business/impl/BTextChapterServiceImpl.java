@@ -522,9 +522,11 @@ public class BTextChapterServiceImpl implements BTextChapterService {
         List<ChapterInfoEntity> chapterInfos = chapterInfoService.getByChapterId(chapterId);
 
         List<String> linesList = new ArrayList<>();
+        Map<String, ChapterInfoEntity> chapterInfoMap = new HashMap<>();
         chapterInfos.forEach(lineInfo -> {
             if (Objects.equals(lineInfo.getDialogueFlag(), Boolean.TRUE)) {
                 linesList.add(lineInfo.getIndex() + ": " + lineInfo.getText());
+                chapterInfoMap.put(lineInfo.getIndex(), lineInfo);
             }
         });
 
@@ -545,24 +547,52 @@ public class BTextChapterServiceImpl implements BTextChapterService {
         roleInferenceData.setLines(String.join("\n", linesList));
 
         List<TextRoleInferenceEntity> textRoleInferences = textRoleInferenceService.getByChapterId(chapterId);
-        if (!CollectionUtils.isEmpty(textRoleInferences)) {
-            roleInferenceData.setTextRoleInferences(textRoleInferences);
+        Map<String, AiResult.Role> roleMap = new HashMap<>();
+
+        if (CollectionUtils.isEmpty(textRoleInferences)) {
+            textRoleInferences = chapterInfoMap.values()
+                    .stream()
+                    .sorted(Comparator.comparingInt((ChapterInfoEntity v) -> Optional.ofNullable(v.getTextSort()).orElse(0))
+                            .thenComparingInt(ChapterInfoEntity::getId))
+                    .map((item) -> {
+                        TextRoleInferenceEntity textRoleInferenceEntity = new TextRoleInferenceEntity();
+                        textRoleInferenceEntity.setProjectId(projectId);
+                        textRoleInferenceEntity.setChapterId(chapterId);
+                        textRoleInferenceEntity.setTextIndex(item.getIndex());
+                        textRoleInferenceEntity.setText(item.getText());
+                        return textRoleInferenceEntity;
+                    }).toList();
+            roleInferenceData.setTextRoleMoods(textRoleInferences);
+
+        } else {
+            for (TextRoleInferenceEntity textRoleInference : textRoleInferences) {
+                if (chapterInfoMap.containsKey(textRoleInference.getTextIndex())) {
+                    textRoleInference.setText(chapterInfoMap.get(textRoleInference.getTextIndex()).getText());
+                    AiResult.Role role = new AiResult.Role();
+                    role.setRole(textRoleInference.getRole());
+                    role.setGender(textRoleInference.getGender());
+                    role.setAge(textRoleInference.getAge());
+                    roleMap.put(textRoleInference.getRole(), role);
+                }
+            }
+
+            roleInferenceData.setTextRoleMoods(textRoleInferences);
+            roleInferenceData.setRoles(roleMap.values().stream().toList());
         }
 
         return roleInferenceData;
     }
 
     @Override
-    public void loadRoleInference(String projectId, String chapterId) {
-        List<TextRoleInferenceEntity> roleInferenceEntities = textRoleInferenceService.getByChapterId(chapterId);
+    public void loadRoleInference(String projectId, String chapterId, List<TextRoleInferenceEntity> textRoleInferences) {
 
-        if (!CollectionUtils.isEmpty(roleInferenceEntities)) {
+        if (!CollectionUtils.isEmpty(textRoleInferences)) {
             List<TextCommonRoleEntity> commonRoles = textCommonRoleService.list();
             Map<String, TextCommonRoleEntity> commonRoleMap = commonRoles.
                     stream()
                     .collect(Collectors.toMap(TextCommonRoleEntity::getRole, Function.identity(), (a, _) -> a));
 
-            List<TextRoleEntity> textRoleEntities = roleInferenceEntities.stream()
+            List<TextRoleEntity> textRoleEntities = textRoleInferences.stream()
                     .collect(Collectors.toMap(TextRoleInferenceEntity::getRole, Function.identity(), (v1, _) -> v1))
                     .values()
                     .stream().map(roleInferenceEntity -> {
@@ -585,7 +615,7 @@ public class BTextChapterServiceImpl implements BTextChapterService {
                         return textRoleEntity;
                     }).toList();
 
-            Map<String, TextRoleInferenceEntity> roleInferenceEntityMap = roleInferenceEntities.stream()
+            Map<String, TextRoleInferenceEntity> roleInferenceEntityMap = textRoleInferences.stream()
                     .collect(Collectors.toMap(TextRoleInferenceEntity::getTextIndex, Function.identity(), (a, _) -> a));
 
             List<ChapterInfoEntity> chapterInfoEntities = chapterInfoService.getByChapterId(chapterId);
@@ -647,6 +677,8 @@ public class BTextChapterServiceImpl implements BTextChapterService {
                 }
                 saveTextRoles.add(textRoleEntity);
             }
+
+            textRoleInferenceService.saveOrUpdateBatch(textRoleInferences);
 
             textRoleService.deleteByChapterId(chapterId);
             textRoleService.saveBatch(saveTextRoles);
@@ -788,17 +820,12 @@ public class BTextChapterServiceImpl implements BTextChapterService {
     public Flux<String> roleInference(RoleInferenceParam roleInferenceParam) {
         String projectId = roleInferenceParam.getProjectId();
         String chapterId = roleInferenceParam.getChapterId();
+
         if (StringUtils.equals(roleInferenceParam.getInferenceType(), "online")) {
             return onlineRoleInference(roleInferenceParam);
         }
-        if (StringUtils.equals(roleInferenceParam.getInferenceType(), "last")) {
-            loadRoleInference(projectId, roleInferenceParam.getChapterId());
-        }
         if (StringUtils.equals(roleInferenceParam.getInferenceType(), "input")) {
-            if (StringUtils.isNotBlank(roleInferenceParam.getInferenceResult())) {
-                List<ChapterInfoEntity> chapterInfos = chapterInfoService.getByChapterId(chapterId);
-                mergeAiResultInfo(projectId, chapterId, roleInferenceParam.getInferenceResult(), chapterInfos);
-            }
+            loadRoleInference(projectId, chapterId, roleInferenceParam.getTextRoleInferences());
         }
         return Flux.empty();
     }
@@ -806,6 +833,7 @@ public class BTextChapterServiceImpl implements BTextChapterService {
     public Flux<String> onlineRoleInference(RoleInferenceParam roleInferenceParam) {
         String projectId = roleInferenceParam.getProjectId();
         String chapterId = roleInferenceParam.getChapterId();
+        Integer tmServerId = roleInferenceParam.getTmServerId();
 
         List<ChapterInfoEntity> chapterInfos = chapterInfoService.getByChapterId(chapterId);
 
@@ -847,7 +875,7 @@ public class BTextChapterServiceImpl implements BTextChapterService {
         AtomicBoolean isMapping = new AtomicBoolean(false);
         StringBuilder sbStr = new StringBuilder();
 
-        return aiService.stream(systemMessage, userMessage)
+        return aiService.stream(tmServerId, systemMessage, userMessage)
                 .publishOn(Schedulers.boundedElastic())
                 .doOnNext(v -> {
                     System.out.println(v);
