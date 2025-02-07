@@ -196,12 +196,13 @@
         </profile>
 
 
+        <!-- Windows 平台 -->
         <profile>
-            <id>windows</id>
+            <id>windows-x86_64</id>
             <activation>
-                <activeByDefault>true</activeByDefault>
                 <os>
                     <family>Windows</family>
+                    <arch>amd64</arch>  <!-- 传统x86架构 -->
                 </os>
             </activation>
             <properties>
@@ -210,11 +211,26 @@
         </profile>
 
         <profile>
-            <id>linux</id>
+            <id>windows-aarch64</id>
+            <activation>
+                <os>
+                    <family>Windows</family>
+                    <arch>aarch64</arch>  <!-- ARM架构（如Surface Pro X） -->
+                </os>
+            </activation>
+            <properties>
+                <platform>windows-aarch64</platform>
+            </properties>
+        </profile>
+
+        <!-- Linux 平台 -->
+        <profile>
+            <id>linux-x86_64</id>
             <activation>
                 <os>
                     <family>unix</family>
                     <name>Linux</name>
+                    <arch>amd64</arch>
                 </os>
             </activation>
             <properties>
@@ -223,14 +239,43 @@
         </profile>
 
         <profile>
-            <id>mac</id>
+            <id>linux-aarch64</id>
+            <activation>
+                <os>
+                    <family>unix</family>
+                    <name>Linux</name>
+                    <arch>aarch64</arch>  <!-- ARM服务器/树莓派4等 -->
+                </os>
+            </activation>
+            <properties>
+                <platform>linux-arm64</platform>
+            </properties>
+        </profile>
+
+        <!-- macOS 平台 -->
+        <profile>
+            <id>mac-x86_64</id>
             <activation>
                 <os>
                     <family>mac</family>
+                    <arch>x86_64</arch>  <!-- Intel芯片Mac -->
                 </os>
             </activation>
             <properties>
                 <platform>macosx-x86_64</platform>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>mac-arm64</id>
+            <activation>
+                <os>
+                    <family>mac</family>
+                    <arch>aarch64</arch>  <!-- Apple Silicon芯片（M1/M2） -->
+                </os>
+            </activation>
+            <properties>
+                <platform>macosx-arm64</platform>
             </properties>
         </profile>
 

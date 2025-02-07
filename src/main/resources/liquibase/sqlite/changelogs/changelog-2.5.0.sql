@@ -58,7 +58,8 @@ alter table ref_audio_entity
 alter table ref_audio_entity
     rename mood_audio_tags to pa_audio_tags;
 
-alter table ref_audio_entity rename to am_prompt_audio;
+alter table ref_audio_entity
+    rename to am_prompt_audio;
 
 create table am_server
 (
@@ -69,16 +70,16 @@ create table am_server
     api_version varchar(255) null
 );
 
-INSERT INTO am_server (name, host, path, api_version)
-VALUES ('gpt-sovits', 'http://127.0.0.1:16860', '/', 'v1');
-INSERT INTO am_server (name, host, path, api_version)
-VALUES ('fish-speech', 'http://127.0.0.1:16861', '/v1/tts', 'v1');
-INSERT INTO am_server (name, host, path, api_version)
-VALUES ('edge-tts', 'http://127.0.0.1:16862', '/tts', 'v1');
-INSERT INTO am_server (name, host, path, api_version)
-VALUES ('chat-tts', 'http://127.0.0.1:16863', '/tts', 'v1');
-INSERT INTO am_server (name, host, path, api_version)
-VALUES ('cosy-voice', 'http://127.0.0.1:16864', '/tts', 'v1');
+insert into am_server (name, host, path, api_version)
+values ('gpt-sovits', 'http://127.0.0.1:16860', '/', 'v1');
+insert into am_server (name, host, path, api_version)
+values ('fish-speech', 'http://127.0.0.1:16861', '/v1/tts', 'v1');
+insert into am_server (name, host, path, api_version)
+values ('edge-tts', 'http://127.0.0.1:16862', '/tts', 'v1');
+insert into am_server (name, host, path, api_version)
+values ('chat-tts', 'http://127.0.0.1:16863', '/tts', 'v1');
+insert into am_server (name, host, path, api_version)
+values ('cosy-voice', 'http://127.0.0.1:16864', '/tts', 'v1');
 
 create table chapter_info
 (
