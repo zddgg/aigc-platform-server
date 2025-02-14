@@ -54,12 +54,12 @@ public class AmModelConfigServiceImpl extends ServiceImpl<AmModelConfigMapper, A
         List<EdgeTtsVoice> edgeTtsVoices = edgeTtsCreator.getVoices();
 
         Map<String, EdgeTtsVoice> voiceMap = edgeTtsVoices.stream()
-                .collect(Collectors.toMap(EdgeTtsVoice::getShortName, Function.identity(), (_, b) -> b));
+                .collect(Collectors.toMap(EdgeTtsVoice::getShortName, Function.identity(), (a, b) -> b));
 
         List<AmModelConfigEntity> modelConfigs = this.list(new LambdaQueryWrapper<AmModelConfigEntity>()
                 .eq(AmModelConfigEntity::getAmType, ModelTypeEnum.edge_tts.getName()));
         Map<String, AmModelConfigEntity> configMap = modelConfigs.stream()
-                .collect(Collectors.toMap(AmModelConfigEntity::getMcName, Function.identity(), (_, b) -> b));
+                .collect(Collectors.toMap(AmModelConfigEntity::getMcName, Function.identity(), (a, b) -> b));
 
 
         List<AmModelConfigEntity> updatePromptAudios = new ArrayList<>();

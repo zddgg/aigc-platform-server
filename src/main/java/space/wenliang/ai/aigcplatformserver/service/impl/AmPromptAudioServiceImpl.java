@@ -134,7 +134,7 @@ public class AmPromptAudioServiceImpl extends ServiceImpl<AmPromptAudioMapper, A
     public List<PromptAudioSort> queryPromptAudioSorts() {
         return this.list()
                 .stream()
-                .collect(Collectors.toMap(AmPromptAudioEntity::getPaGroup, Function.identity(), (_, b) -> b))
+                .collect(Collectors.toMap(AmPromptAudioEntity::getPaGroup, Function.identity(), (a, b) -> b))
                 .values()
                 .stream()
                 .map(refAudioEntity -> {
@@ -167,7 +167,7 @@ public class AmPromptAudioServiceImpl extends ServiceImpl<AmPromptAudioMapper, A
 
         Map<String, AmPromptAudioEntity> audioNamesMap = promptAudioEntities.stream()
                 .collect(Collectors.toMap(r ->
-                        String.join("-", List.of(r.getPaGroup(), r.getPaRole())), Function.identity(), (_, b) -> b));
+                        String.join("-", List.of(r.getPaGroup(), r.getPaRole())), Function.identity(), (a, b) -> b));
 
         Map<String, List<AmPromptAudioEntity>> audioMoodsMap = promptAudioEntities.stream()
                 .collect(Collectors.groupingBy(r ->
@@ -290,13 +290,13 @@ public class AmPromptAudioServiceImpl extends ServiceImpl<AmPromptAudioMapper, A
                                   List<PromptAudioSort> promptAudioSorts) {
 
         Map<String, AmPromptAudioEntity> localModelMap = localPromptAudios.stream()
-                .collect(Collectors.toMap(this::buildDupKey, Function.identity(), (_, b) -> b));
+                .collect(Collectors.toMap(this::buildDupKey, Function.identity(), (a, b) -> b));
 
         Map<String, AmPromptAudioEntity> cacheModelMap = cachePromptAudios.stream()
-                .collect(Collectors.toMap(this::buildDupKey, Function.identity(), (_, b) -> b));
+                .collect(Collectors.toMap(this::buildDupKey, Function.identity(), (a, b) -> b));
 
         Map<String, PromptAudioSort> audioSortMap = promptAudioSorts.stream()
-                .collect(Collectors.toMap(PromptAudioSort::getGroup, Function.identity(), (_, b) -> b));
+                .collect(Collectors.toMap(PromptAudioSort::getGroup, Function.identity(), (a, b) -> b));
 
         List<AmPromptAudioEntity> updatePromptAudios = new ArrayList<>();
         List<Integer> removeIds = new ArrayList<>();

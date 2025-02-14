@@ -65,10 +65,10 @@ public class AmModelFileServiceImpl extends ServiceImpl<AmModelFileMapper, AmMod
     public void mergeModelFiles(List<AmModelFileEntity> localModelFiles, List<AmModelFileEntity> cacheModelFiles) {
 
         Map<String, AmModelFileEntity> localModelMap = localModelFiles.stream()
-                .collect(Collectors.toMap(this::buildDupKey, Function.identity(), (_, b) -> b));
+                .collect(Collectors.toMap(this::buildDupKey, Function.identity(), (a, b) -> b));
 
         Map<String, AmModelFileEntity> cacheModelMap = cacheModelFiles.stream()
-                .collect(Collectors.toMap(this::buildDupKey, Function.identity(), (_, b) -> b));
+                .collect(Collectors.toMap(this::buildDupKey, Function.identity(), (a, b) -> b));
 
         List<AmModelFileEntity> updateModelFiles = new ArrayList<>();
         List<Integer> removeIds = new ArrayList<>();

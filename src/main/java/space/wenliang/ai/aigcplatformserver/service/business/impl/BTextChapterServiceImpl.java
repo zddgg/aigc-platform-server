@@ -590,10 +590,10 @@ public class BTextChapterServiceImpl implements BTextChapterService {
             List<TextCommonRoleEntity> commonRoles = textCommonRoleService.list();
             Map<String, TextCommonRoleEntity> commonRoleMap = commonRoles.
                     stream()
-                    .collect(Collectors.toMap(TextCommonRoleEntity::getRole, Function.identity(), (a, _) -> a));
+                    .collect(Collectors.toMap(TextCommonRoleEntity::getRole, Function.identity(), (a, b) -> b));
 
             List<TextRoleEntity> textRoleEntities = textRoleInferences.stream()
-                    .collect(Collectors.toMap(TextRoleInferenceEntity::getRole, Function.identity(), (v1, _) -> v1))
+                    .collect(Collectors.toMap(TextRoleInferenceEntity::getRole, Function.identity(), (a, b) -> b))
                     .values()
                     .stream().map(roleInferenceEntity -> {
                         TextRoleEntity textRoleEntity = new TextRoleEntity();
@@ -616,7 +616,7 @@ public class BTextChapterServiceImpl implements BTextChapterService {
                     }).toList();
 
             Map<String, TextRoleInferenceEntity> roleInferenceEntityMap = textRoleInferences.stream()
-                    .collect(Collectors.toMap(TextRoleInferenceEntity::getTextIndex, Function.identity(), (a, _) -> a));
+                    .collect(Collectors.toMap(TextRoleInferenceEntity::getTextIndex, Function.identity(), (a, b) -> b));
 
             List<ChapterInfoEntity> chapterInfoEntities = chapterInfoService.getByChapterId(chapterId);
 
@@ -1029,15 +1029,15 @@ public class BTextChapterServiceImpl implements BTextChapterService {
 
             Map<String, AiResult.Role> aiResultRoleMap = aiResult.getRoles()
                     .stream()
-                    .collect(Collectors.toMap(AiResult.Role::getRole, Function.identity(), (a, _) -> a));
+                    .collect(Collectors.toMap(AiResult.Role::getRole, Function.identity(), (a, b) -> b));
             Map<String, AiResult.LinesMapping> linesMappingMap = aiResult.getLinesMappings()
                     .stream()
-                    .collect(Collectors.toMap(AiResult.LinesMapping::getLinesIndex, Function.identity(), (a, _) -> a));
+                    .collect(Collectors.toMap(AiResult.LinesMapping::getLinesIndex, Function.identity(), (a, b) -> b));
 
             List<TextCommonRoleEntity> commonRoles = textCommonRoleService.list();
             Map<String, TextCommonRoleEntity> commonRoleMap = commonRoles.
                     stream()
-                    .collect(Collectors.toMap(TextCommonRoleEntity::getRole, Function.identity(), (a, _) -> a));
+                    .collect(Collectors.toMap(TextCommonRoleEntity::getRole, Function.identity(), (a, b) -> b));
 
             List<Integer> audioModelResetIds = new ArrayList<>();
             boolean hasAside = false;
@@ -1197,7 +1197,7 @@ public class BTextChapterServiceImpl implements BTextChapterService {
                     role.setRole(m.getRole());
                     return role;
                 })
-                .collect(Collectors.toMap(AiResult.Role::getRole, Function.identity(), (v1, _) -> v1))
+                .collect(Collectors.toMap(AiResult.Role::getRole, Function.identity(), (a, b) -> b))
                 .values().stream().toList();
 
         List<AiResult.Role> newRoles = new ArrayList<>();

@@ -54,8 +54,8 @@ public class EnvConfig implements StartHook.StartHookListener {
             domain = "http://" + host + ":" + port;
         }
 
-        modelUrl = STR."\{domain}/files/model/";
-        projectUrl = STR."\{domain}/files/project/";
+        modelUrl = domain + "/files/model/";
+        projectUrl = domain + "/files/project/";
 
         if (StringUtils.isBlank(modelDir)) {
             modelDir = userDir + File.separator + "model";
