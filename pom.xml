@@ -6,13 +6,13 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.4</version>
+        <version>3.4.3</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
 
     <groupId>space.wenliang.ai</groupId>
     <artifactId>aigc-platform-server</artifactId>
-    <version>2.6.5</version>
+    <version>2.7.0</version>
 
     <name>aigc-platform-server</name>
 
@@ -21,6 +21,13 @@
     <properties>
         <java.version>21</java.version>
         <application.version>${project.version}</application.version>
+        <mybatis-plus.version>3.5.10.1</mybatis-plus.version>
+        <javacpp.version>1.5.11</javacpp.version>
+        <ffmpeg.version>7.1</ffmpeg.version>
+        <fastjson2.version>2.0.55</fastjson2.version>
+        <juniversalchardet.version>1.0.3</juniversalchardet.version>
+        <hutool.version>5.8.36</hutool.version>
+        <vavr.version>0.10.6</vavr.version>
         <platform>windows-x86_64</platform>
         <deployment>split</deployment>
         <db.type>mysql</db.type>
@@ -47,6 +54,7 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!--db start-->
         <dependency>
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
@@ -65,8 +73,15 @@
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
-            <version>3.5.8</version>
+            <version>${mybatis-plus.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-jsqlparser</artifactId>
+            <version>${mybatis-plus.version}</version>
+        </dependency>
+        <!--db end-->
 
         <dependency>
             <groupId>org.msgpack</groupId>
@@ -86,17 +101,17 @@
         <dependency>
             <groupId>org.bytedeco</groupId>
             <artifactId>javacv</artifactId>
-            <version>1.5.10</version>
+            <version>${javacpp.version}</version>
         </dependency>
         <dependency>
             <groupId>org.bytedeco</groupId>
             <artifactId>javacpp</artifactId>
-            <version>1.5.10</version>
+            <version>${javacpp.version}</version>
         </dependency>
         <dependency>
             <groupId>org.bytedeco</groupId>
             <artifactId>ffmpeg</artifactId>
-            <version>6.1.1-1.5.10</version>
+            <version>${ffmpeg.version}-${javacpp.version}</version>
             <classifier>${platform}</classifier>
         </dependency>
         <!-- javacv end -->
@@ -109,25 +124,25 @@
         <dependency>
             <groupId>com.alibaba.fastjson2</groupId>
             <artifactId>fastjson2</artifactId>
-            <version>2.0.53</version>
+            <version>${fastjson2.version}</version>
         </dependency>
 
         <dependency>
             <groupId>com.googlecode.juniversalchardet</groupId>
             <artifactId>juniversalchardet</artifactId>
-            <version>1.0.3</version>
+            <version>${juniversalchardet.version}</version>
         </dependency>
 
         <dependency>
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-all</artifactId>
-            <version>5.8.32</version>
+            <version>${hutool.version}</version>
         </dependency>
 
         <dependency>
             <groupId>io.vavr</groupId>
             <artifactId>vavr</artifactId>
-            <version>0.10.4</version>
+            <version>${vavr.version}</version>
         </dependency>
 
         <dependency>
@@ -196,12 +211,13 @@
         </profile>
 
 
+        <!-- Windows 平台 -->
         <profile>
-            <id>windows</id>
+            <id>windows-x86_64</id>
             <activation>
-                <activeByDefault>true</activeByDefault>
                 <os>
                     <family>Windows</family>
+                    <arch>amd64</arch>  <!-- 传统x86架构 -->
                 </os>
             </activation>
             <properties>
@@ -210,11 +226,26 @@
         </profile>
 
         <profile>
-            <id>linux</id>
+            <id>windows-aarch64</id>
+            <activation>
+                <os>
+                    <family>Windows</family>
+                    <arch>aarch64</arch>  <!-- ARM架构（如Surface Pro X） -->
+                </os>
+            </activation>
+            <properties>
+                <platform>windows-aarch64</platform>
+            </properties>
+        </profile>
+
+        <!-- Linux 平台 -->
+        <profile>
+            <id>linux-x86_64</id>
             <activation>
                 <os>
                     <family>unix</family>
                     <name>Linux</name>
+                    <arch>amd64</arch>
                 </os>
             </activation>
             <properties>
@@ -223,14 +254,43 @@
         </profile>
 
         <profile>
-            <id>mac</id>
+            <id>linux-aarch64</id>
+            <activation>
+                <os>
+                    <family>unix</family>
+                    <name>Linux</name>
+                    <arch>aarch64</arch>  <!-- ARM服务器/树莓派4等 -->
+                </os>
+            </activation>
+            <properties>
+                <platform>linux-arm64</platform>
+            </properties>
+        </profile>
+
+        <!-- macOS 平台 -->
+        <profile>
+            <id>mac-x86_64</id>
             <activation>
                 <os>
                     <family>mac</family>
+                    <arch>x86_64</arch>  <!-- Intel芯片Mac -->
                 </os>
             </activation>
             <properties>
                 <platform>macosx-x86_64</platform>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>mac-arm64</id>
+            <activation>
+                <os>
+                    <family>mac</family>
+                    <arch>aarch64</arch>  <!-- Apple Silicon芯片（M1/M2） -->
+                </os>
+            </activation>
+            <properties>
+                <platform>macosx-arm64</platform>
             </properties>
         </profile>
 
