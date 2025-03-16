@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -86,6 +87,7 @@ public class AmModelFileServiceImpl extends ServiceImpl<AmModelFileMapper, AmMod
         List<AmModelFileEntity> newModelFiles = localModelFiles.stream()
                 .filter(modelFile -> !cacheModelMap.containsKey(buildDupKey(modelFile)))
                 .peek(v -> v.setMfId(IdUtils.uuid()))
+                .sorted(Comparator.comparing(AmModelFileEntity::getMfRole))
                 .toList();
 
         if (!CollectionUtils.isEmpty(updateModelFiles)) {
